@@ -10,50 +10,8 @@ import 'package:url_launcher/url_launcher.dart';
 final _isExtracting = false.obs;
 
 void handleUpdate(String releasePageUrl) {
-  _isExtracting.value = false;
-  String downloadUrl = releasePageUrl.replaceAll('tag', 'download');
-  String version = downloadUrl.substring(downloadUrl.lastIndexOf('/') + 1);
-  final String downloadFile =
-      bind.mainGetCommonSync(key: 'download-file-$version');
-  if (downloadFile.startsWith('error:')) {
-    final error = downloadFile.replaceFirst('error:', '');
-    msgBox(gFFI.sessionId, 'custom-nocancel-nook-hasclose', 'Error', error,
-        releasePageUrl, gFFI.dialogManager);
-    return;
-  }
-  downloadUrl = '$downloadUrl/$downloadFile';
-
-  SimpleWrapper downloadId = SimpleWrapper('');
-  SimpleWrapper<VoidCallback> onCanceled = SimpleWrapper(() {});
-  gFFI.dialogManager.dismissAll();
-  gFFI.dialogManager.show((setState, close, context) {
-    return CustomAlertDialog(
-        title: Obx(() => Text(translate(_isExtracting.isTrue
-            ? 'Preparing for installation ...'
-            : 'Downloading {$appName}'))),
-        content:
-            UpdateProgress(releasePageUrl, downloadUrl, downloadId, onCanceled)
-                .marginSymmetric(horizontal: 8)
-                .paddingOnly(top: 12),
-        actions: [
-          if (_isExtracting.isFalse) dialogButton(translate('Cancel'), onPressed: () async {
-            onCanceled.value();
-            await bind.mainSetCommon(
-                key: 'cancel-downloader', value: downloadId.value);
-            // Wait for the downloader to be removed.
-            for (int i = 0; i < 10; i++) {
-              await Future.delayed(const Duration(milliseconds: 300));
-              final isCanceled = 'error:Downloader not found' ==
-                  await bind.mainGetCommon(
-                      key: 'download-data-${downloadId.value}');
-              if (isCanceled) {
-                break;
-              }
-            }
-            close();
-          }, isOutline: true),
-        ]);
-  });
+  // Disabled update functionality
+  return;
 }
 
 class UpdateProgress extends StatefulWidget {
