@@ -1,0 +1,41 @@
+name: Flutter Web Preview
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'rustdesk/flutter/**'
+      - 'rustdesk/libs/hbb_common/src/config.rs'
+      - '.github/workflows/flutter_web_preview.yml'
+  workflow_dispatch: {}
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enable web support
+        run: flutter config --enable-web
+
+      - name: Fetch dependencies
+        working-directory: rustdesk/flutter
+        run: flutter pub get
+
+      - name: Build Flutter Web (release)
+        working-directory: rustdesk/flutter
+        run: flutter build web --release --base-href=./
+
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustdesk-flutter-web-preview
+          path: rustdesk/flutter/build/web
+
