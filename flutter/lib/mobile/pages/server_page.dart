@@ -14,6 +14,8 @@ import '../../consts.dart';
 import '../../models/platform_model.dart';
 import '../../models/server_model.dart';
 import 'home_page.dart';
+import 'package:flutter_hbb/mobile/pages/settings_page.dart';
+import 'package:flutter_hbb/common/widgets/login.dart';
 
 class ServerPage extends StatefulWidget implements PageShape {
   @override

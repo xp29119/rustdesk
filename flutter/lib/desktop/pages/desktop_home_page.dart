@@ -24,6 +24,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:window_size/window_size.dart' as window_size;
 import '../widgets/button.dart';
+import 'package:flutter_hbb/common/widgets/login.dart';
 
 class DesktopHomePage extends StatefulWidget {
   const DesktopHomePage({Key? key}) : super(key: key);
@@ -79,6 +80,41 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final isIncomingOnly = bind.isIncomingOnly();
     final isOutgoingOnly = bind.isOutgoingOnly();
     final children = <Widget>[
+      if (gFFI.userModel.userName.value.isEmpty)
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.amber.shade100,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.amber.shade300),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                translate('Security Alert'),
+                style: TextStyle(
+                  color: Colors.red.shade700,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                translate('Login is required to control. Please sign in.'),
+                style: TextStyle(color: Colors.red.shade700),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 36,
+                child: ElevatedButton(
+                  onPressed: () => loginDialog(),
+                  child: Text(translate('Login')),
+                ),
+              ),
+            ],
+          ),
+        ),
       if (!isOutgoingOnly) buildPresetPasswordWarning(),
       if (bind.isCustomClient())
         Align(
