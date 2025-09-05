@@ -249,10 +249,37 @@ class ServiceNotRunningNotification extends StatelessWidget {
             ElevatedButton.icon(
                 icon: const Icon(Icons.play_arrow),
                 onPressed: () {
-                  if (gFFI.userModel.userName.value.isEmpty &&
-                      bind.mainGetLocalOption(key: "show-scam-warning") !=
-                          "N") {
-                    showScamWarning(context, serverModel);
+                  if (gFFI.userModel.userName.value.isEmpty) {
+                    Container(
+                      margin: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade100,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.amber.shade300),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text('未登录状态',
+                              style: TextStyle(
+                                color: Colors.red.shade700,
+                                fontWeight: FontWeight.bold,
+                              )),
+                          const SizedBox(height: 6),
+                          Text('若需控制其他设备，请登录账号',
+                              style: TextStyle(color: Colors.red.shade700)),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            height: 40,
+                            child: ElevatedButton(
+                              onPressed: () => loginDialog(),
+                              child: Text('登录'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
                   } else {
                     serverModel.toggleService();
                   }

@@ -93,7 +93,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                translate('Security Alert'),
+                '未登录状态',
                 style: TextStyle(
                   color: Colors.red.shade700,
                   fontWeight: FontWeight.bold,
@@ -101,7 +101,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               ),
               const SizedBox(height: 6),
               Text(
-                translate('Login is required to control. Please sign in.'),
+                '若需控制其他设备，请登录账号',
                 style: TextStyle(color: Colors.red.shade700),
               ),
               const SizedBox(height: 10),
@@ -109,7 +109,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 height: 36,
                 child: ElevatedButton(
                   onPressed: () => loginDialog(),
-                  child: Text(translate('Login')),
+                  child: Text('登录'),
                 ),
               ),
             ],
