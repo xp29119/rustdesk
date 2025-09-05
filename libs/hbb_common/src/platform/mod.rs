@@ -13,7 +13,9 @@ use crate::{config::Config, log};
 use std::process::exit;
 
 #[cfg(not(debug_assertions))]
-static mut GLOBAL_CALLBACK: Option<Box<dyn Fn()>> = None;
+lazy_static::lazy_static! {
+    static ref GLOBAL_CALLBACK: std::sync::Mutex<Option<Box<dyn Fn() + Send + Sync + 'static>>> = Default::default();
+}
 
 #[cfg(not(debug_assertions))]
 extern "C" fn breakdown_signal_handler(sig: i32) {
@@ -61,10 +63,8 @@ extern "C" fn breakdown_signal_handler(sig: i32) {
         )
         .ok();
     }
-    unsafe {
-        if let Some(callback) = &GLOBAL_CALLBACK {
-            callback()
-        }
+    if let Some(callback) = GLOBAL_CALLBACK.lock().unwrap().as_ref() {
+        (callback)();
     }
     exit(0);
 }
@@ -72,10 +72,8 @@ extern "C" fn breakdown_signal_handler(sig: i32) {
 #[cfg(not(debug_assertions))]
 pub fn register_breakdown_handler<T>(callback: T)
 where
-    T: Fn() + 'static,
+    T: Fn() + Send + Sync + 'static,
 {
-    unsafe {
-        GLOBAL_CALLBACK = Some(Box::new(callback));
-        libc::signal(libc::SIGSEGV, breakdown_signal_handler as _);
-    }
+    *GLOBAL_CALLBACK.lock().unwrap() = Some(Box::new(callback));
+    unsafe { libc::signal(libc::SIGSEGV, breakdown_signal_handler as _) };
 }
