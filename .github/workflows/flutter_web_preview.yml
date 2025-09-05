@@ -4,8 +4,8 @@ on:
   push:
     branches: [ master ]
     paths:
-      - 'rustdesk/flutter/**'
-      - 'rustdesk/libs/hbb_common/src/config.rs'
+      - 'flutter/**'
+      - 'libs/hbb_common/src/config.rs'
       - '.github/workflows/flutter_web_preview.yml'
   workflow_dispatch: {}
 
@@ -26,16 +26,16 @@ jobs:
         run: flutter config --enable-web
 
       - name: Fetch dependencies
-        working-directory: rustdesk/flutter
+        working-directory: flutter
         run: flutter pub get
 
       - name: Build Flutter Web (release)
-        working-directory: rustdesk/flutter
+        working-directory: flutter
         run: flutter build web --release --base-href=./
 
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
         with:
           name: rustdesk-flutter-web-preview
-          path: rustdesk/flutter/build/web
+          path: flutter/build/web
 
