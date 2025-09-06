@@ -93,50 +93,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         child: loadLogo(),
       ),
       buildTip(context),
-      if (!isOutgoingOnly)
-        Container(
-          margin: const EdgeInsets.fromLTRB(20, 8, 12, 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(
-                Theme.of(context).brightness == Brightness.dark ? 0.16 : 0.10),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.30)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '未登录',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '若需控制其他设备须登录。登录后可同步地址簿与设置。',
-                style: Theme.of(context).textTheme.bodySmall,
-                softWrap: true,
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => loginDialog(),
-                  icon: const Icon(Icons.login, size: 16),
-                  label: const Text('登录'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(40),
-                    textStyle: const TextStyle(fontWeight: FontWeight.w600),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+      if (!isOutgoingOnly) _buildLoginCard(context),
       if (!isOutgoingOnly) buildIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
       if (!isOutgoingOnly)
@@ -169,7 +126,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             ],
           ),
         ),
-      // login notice moved above ID/Password; removed here
+      // login card moved above; removed duplicate here
       // removed duplicate not-logged-in tip here
       FutureBuilder<Widget>(
         future: Future.value(
@@ -254,6 +211,51 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               )
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLoginCard(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 6, 12, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(
+            Theme.of(context).brightness == Brightness.dark ? 0.16 : 0.10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.28)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('未登录',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text('若需控制其他设备请登录账号，登录后可同步地址簿与设置。',
+                    style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          FilledButton.icon(
+            onPressed: () => loginDialog(),
+            icon: const Icon(Icons.login, size: 16),
+            label: const Text('登录'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            ),
+          )
+        ],
       ),
     );
   }
