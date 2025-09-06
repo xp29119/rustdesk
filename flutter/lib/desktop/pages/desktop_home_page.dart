@@ -95,33 +95,47 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       if (!isOutgoingOnly) buildIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
       if (!isOutgoingOnly)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 2, 12, 6),
+          child: Row(
+            children: [
+              const Spacer(),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const HardwareInfoPage()),
+                  );
+                },
+                icon: const Icon(Icons.info_outline, size: 16),
+                label: const Text('硬件信息'),
+              ),
+            ],
+          ),
+        ),
+      if (!isOutgoingOnly)
         Container(
           margin: const EdgeInsets.fromLTRB(20, 2, 12, 8),
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Color.alphaBlend(
-              Colors.amber.withOpacity(
-                  Theme.of(context).brightness == Brightness.dark ? 0.22 : 0.14),
-              Theme.of(context).colorScheme.surface,
-            ),
+            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(
+                Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.25),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: Colors.amber.withOpacity(
-                  Theme.of(context).brightness == Brightness.dark ? 0.60 : 0.40),
-            ),
+            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '未登录',
-                style: TextStyle(
-                    color: Colors.red.shade400, fontWeight: FontWeight.bold),
+                '未登录（建议登录以开启远程控制）',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 6),
-              const Text(
-                '若需控制其他设备请登录账号',
-                style: TextStyle(color: Colors.grey, fontSize: 14),
+              Text(
+                '若需控制其他设备请登录账号。登录后可同步地址簿与设置。',
+                style: Theme.of(context).textTheme.bodySmall,
                 softWrap: true,
               ),
               const SizedBox(height: 8),
@@ -130,17 +144,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   ElevatedButton(
                     onPressed: () => loginDialog(),
                     child: const Text('登录'),
-                  ),
-                  const Spacer(),
-                  TextButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const HardwareInfoPage()),
-                      );
-                    },
-                    icon: const Icon(Icons.info_outline, size: 16),
-                    label: const Text('硬件信息'),
                   ),
                 ],
               ),
