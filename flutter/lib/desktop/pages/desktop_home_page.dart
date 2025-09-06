@@ -12,6 +12,7 @@ import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/common/pages/hardware_info_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
+import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
 import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
@@ -92,6 +93,50 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         child: loadLogo(),
       ),
       buildTip(context),
+      if (!isOutgoingOnly)
+        Container(
+          margin: const EdgeInsets.fromLTRB(20, 8, 12, 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(
+                Theme.of(context).brightness == Brightness.dark ? 0.16 : 0.10),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.30)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '未登录',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '若需控制其他设备须登录。登录后可同步地址簿与设置。',
+                style: Theme.of(context).textTheme.bodySmall,
+                softWrap: true,
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => loginDialog(),
+                  icon: const Icon(Icons.login, size: 16),
+                  label: const Text('登录'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(40),
+                    textStyle: const TextStyle(fontWeight: FontWeight.w600),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       if (!isOutgoingOnly) buildIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
       if (!isOutgoingOnly)
@@ -102,8 +147,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               const Spacer(),
               OutlinedButton.icon(
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const HardwareInfoPage()),
+                  // open HardwareInfo in a unified desktop sub-window (multi-window)
+                  RustDeskMultiWindowManager.instance.newSessionWindow(
+                    WindowType.ViewCamera, // reuse generic sub window type name
+                    'hardware-info',
+                    jsonEncode({
+                      'type': WindowType.ViewCamera.index,
+                      'route': '/hardware_info',
+                    }),
+                    List.empty(growable: true),
+                    false,
                   );
                 },
                 style: OutlinedButton.styleFrom(
@@ -116,44 +169,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             ],
           ),
         ),
-      if (!isOutgoingOnly)
-        Container(
-          margin: const EdgeInsets.fromLTRB(20, 2, 12, 8),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(
-                Theme.of(context).brightness == Brightness.dark ? 0.16 : 0.10),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.30)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '未登录（建议登录以开启远程控制）',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '若需控制其他设备请登录账号。登录后可同步地址簿与设置。',
-                style: Theme.of(context).textTheme.bodySmall,
-                softWrap: true,
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  ElevatedButton(
-                    onPressed: () => loginDialog(),
-                    child: const Text('登录'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+      // login notice moved above ID/Password; removed here
       // removed duplicate not-logged-in tip here
       FutureBuilder<Widget>(
         future: Future.value(
