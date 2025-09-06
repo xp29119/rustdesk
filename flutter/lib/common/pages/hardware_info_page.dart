@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -122,8 +123,9 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _SectionCard(
+                    _CollapsibleSection(
                       title: '基本信息',
+                      initiallyExpanded: true,
                       items: [
                         ..._rows()
                             .where((e) => ['电脑型号','主机名','操作系统','平台','架构','外网IP','内网IP','用户名','MAC']
@@ -132,26 +134,30 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    _SectionCard(
+                    _CollapsibleSection(
                       title: '处理器 / 显卡',
+                      initiallyExpanded: true,
                       items: [
                         ..._rows()
                             .where((e) => ['处理器'].contains(e.label))
-                            .map((row) => _Item(label: row.label, value: '${row.value ?? ''}')),
+                            .map((row) => _Item(label: row.label, value: '${row.value ?? ''}', leading: const Icon(Icons.memory, size: 16))),
                         if (gpu != null)
                           _Item(
                             label: '显卡',
+                            leading: const Icon(Icons.monitor, size: 16),
                             value: [gpu['brand'], gpu['model']].where((e) => (e ?? '').toString().isNotEmpty).join(' '),
                           ),
                       ],
                     ),
                     if (board != null) ...[
                       const SizedBox(height: 12),
-                      _SectionCard(
+                      _CollapsibleSection(
                         title: '主板',
+                        initiallyExpanded: true,
                         items: [
                           _Item(
                             label: '主板',
+                            leading: const Icon(Icons.developer_board, size: 16),
                             value: [board['brand'], board['model']]
                                 .where((e) => (e ?? '').toString().isNotEmpty)
                                 .join(' '),
@@ -160,16 +166,18 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
                       ),
                     ],
                     const SizedBox(height: 12),
-                    _SectionCard(
+                    _CollapsibleSection(
                       title: '内存',
+                      initiallyExpanded: true,
                       items: [
                         ..._rows()
                             .where((e) => ['内存'].contains(e.label))
-                            .map((row) => _Item(label: row.label, value: '${row.value ?? ''}')),
+                            .map((row) => _Item(label: row.label, value: '${row.value ?? ''}', leading: const Icon(Icons.sd_storage, size: 16))),
                         if (memModules != null && memModules.isNotEmpty) ...[
                           for (var i = 0; i < memModules.length; i++)
                             _Item(
                               label: '内存条${i + 1}',
+                              leading: const Icon(Icons.sd_card, size: 16),
                               value: _formatMemModule(memModules[i]),
                             ),
                         ],
@@ -177,8 +185,9 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
                     ),
                     if (disks != null && disks.isNotEmpty) ...[
                       const SizedBox(height: 12),
-                      _SectionCard(
+                      _CollapsibleSection(
                         title: '磁盘',
+                        initiallyExpanded: false,
                         items: [
                           ...disks.map((d) => _Item(
                                 label: d['name']?.toString() ?? '',
@@ -190,12 +199,17 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
                     ],
                     if (nics != null && nics.isNotEmpty) ...[
                       const SizedBox(height: 12),
-                      _SectionCard(
+                      _CollapsibleSection(
                         title: '网络',
+                        initiallyExpanded: false,
                         items: [
                           ...nics.map((n) => _Item(
                                 label: n['name']?.toString() ?? '',
+                                leading: const Icon(Icons.network_check, size: 16),
                                 value: 'IPv4: ${n['ipv4'] ?? ''}',
+                                trailing: (n['speed_mbps'] ?? n['speed']) == null
+                                    ? null
+                                    : _SpeedChip(speed: (n['speed_mbps'] ?? n['speed']).toString()),
                               )),
                         ],
                       ),
@@ -229,7 +243,9 @@ class _Header extends StatelessWidget {
 class _Item extends StatelessWidget {
   final String label;
   final String value;
-  const _Item({required this.label, required this.value});
+  final Widget? leading;
+  final Widget? trailing;
+  const _Item({required this.label, required this.value, this.leading, this.trailing});
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -237,7 +253,12 @@ class _Item extends StatelessWidget {
       children: [
         SizedBox(
           width: 110,
-          child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          child: Row(
+            children: [
+              if (leading != null) ...[leading!, const SizedBox(width: 6)],
+              Expanded(child: Text(label, style: Theme.of(context).textTheme.bodyMedium, overflow: TextOverflow.ellipsis)),
+            ],
+          ),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -246,6 +267,7 @@ class _Item extends StatelessWidget {
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
+        if (trailing != null) ...[const SizedBox(width: 8), trailing!],
       ],
     );
   }
@@ -270,6 +292,64 @@ class _SectionCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CollapsibleSection extends StatefulWidget {
+  final String title;
+  final List<Widget> items;
+  final bool initiallyExpanded;
+  const _CollapsibleSection({required this.title, required this.items, this.initiallyExpanded = false});
+  @override
+  State<_CollapsibleSection> createState() => _CollapsibleSectionState();
+}
+
+class _CollapsibleSectionState extends State<_CollapsibleSection> {
+  late bool _expanded = widget.initiallyExpanded;
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0.5,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: Row(
+                children: [
+                  Expanded(child: Text(widget.title, style: Theme.of(context).textTheme.titleSmall)),
+                  Icon(_expanded ? Icons.expand_less : Icons.expand_more, size: 18),
+                ],
+              ),
+            ),
+            if (_expanded) ...[
+              const SizedBox(height: 8),
+              ..._intersperse(widget.items, const Divider(height: 16)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SpeedChip extends StatelessWidget {
+  final String speed;
+  const _SpeedChip({required this.speed});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.secondary.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.4)),
+      ),
+      child: Text(speed.endsWith('G') || speed.endsWith('g') || speed.contains('Mbps') ? speed : '${speed}Mbps',
+          style: Theme.of(context).textTheme.labelSmall),
     );
   }
 }
