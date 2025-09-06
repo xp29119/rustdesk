@@ -1,13 +1,8 @@
 name: Flutter Web Preview
 
 on:
-  push:
-    branches: [ master ]
-    paths:
-      - 'flutter/**'
-      - 'libs/hbb_common/src/config.rs'
-      - '.github/workflows/flutter_web_preview.yml'
   workflow_dispatch: {}
+  # push trigger disabled; previously ran on changes to flutter/**, config.rs, or this workflow file
 
 jobs:
   build-web:
