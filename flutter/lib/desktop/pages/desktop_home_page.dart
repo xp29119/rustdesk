@@ -106,6 +106,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     MaterialPageRoute(builder: (_) => const HardwareInfoPage()),
                   );
                 },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  side: BorderSide(color: Theme.of(context).colorScheme.outline.withOpacity(0.35)),
+                ),
                 icon: const Icon(Icons.info_outline, size: 16),
                 label: const Text('硬件信息'),
               ),
@@ -118,9 +122,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(
-                Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.25),
+                Theme.of(context).brightness == Brightness.dark ? 0.16 : 0.10),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+            border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.30)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
