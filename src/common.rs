@@ -815,7 +815,7 @@ pub fn hostname() -> String {
 
 #[inline]
 pub fn get_sysinfo() -> serde_json::Value {
-    use hbb_common::sysinfo::{DiskExt, Disks, System, SystemExt};
+    use hbb_common::sysinfo::{Disks, System};
     let mut system = System::new_all();
     system.refresh_memory();
     system.refresh_cpu();
@@ -896,7 +896,7 @@ pub fn get_sysinfo() -> serde_json::Value {
         let mount = d.mount_point().to_string_lossy().to_string();
         let total_gb = (d.total_space() as f64 / 1024.0 / 1024.0 / 1024.0 * 100.0).round() / 100.0;
         let avail_gb = (d.available_space() as f64 / 1024.0 / 1024.0 / 1024.0 * 100.0).round() / 100.0;
-        let fs = String::from_utf8_lossy(d.file_system()).to_string();
+        let fs = d.file_system().to_string_lossy().to_string();
         disk_list.push(json!({
             "name": name,
             "mount": mount,
