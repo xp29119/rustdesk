@@ -160,6 +160,12 @@ jobs:
 
     - uses: Swatinem/rust-cache@v2
 
+    - name: Update Cargo.lock for changed dependencies
+      shell: bash
+      run: |
+        # Update lockfile to reflect recent Cargo.toml edits (e.g., if-addrs)
+        cargo update -w
+
     - name: Build
       uses: actions-rs/cargo@v1
       with:
