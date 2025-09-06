@@ -221,12 +221,12 @@ class _ServerPageState extends State<ServerPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('未登录状态',
+                              Text('未登录',
                                   style: TextStyle(
                                       color: Colors.red.shade400,
                                       fontWeight: FontWeight.bold)),
                               const SizedBox(height: 6),
-                              const Text('若需控制其他设备，请登录账号',
+                              const Text('若需控制其他设备请登录账号',
                                   style: TextStyle(
                                       color: Colors.grey, fontSize: 14),
                                   softWrap: true),
