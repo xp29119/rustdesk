@@ -815,10 +815,13 @@ pub fn hostname() -> String {
 
 #[inline]
 pub fn get_sysinfo() -> serde_json::Value {
-    use hbb_common::sysinfo::System;
-    let mut system = System::new();
+    use hbb_common::sysinfo::{DiskExt, Disks, System, SystemExt};
+    let mut system = System::new_all();
     system.refresh_memory();
     system.refresh_cpu();
+    // refresh disks
+    let mut disks = Disks::new();
+    disks.refresh_list();
     let memory = system.total_memory();
     let memory = (memory as f64 / 1024. / 1024. / 1024. * 100.).round() / 100.;
     let cpus = system.cpus();
@@ -856,6 +859,50 @@ pub fn get_sysinfo() -> serde_json::Value {
         if !username.is_empty() && (!cfg!(windows) || username != "SYSTEM") {
             out["username"] = json!(username);
         }
+    }
+    // Architecture & platform
+    out["arch"] = json!(std::env::consts::ARCH);
+    out["platform"] = json!(std::env::consts::OS);
+
+    // MAC address (best effort, desktop platforms only)
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    if let Ok(Some(ma)) = hbb_common::mac_address::get_mac_address() {
+        out["mac"] = json!(ma.to_string());
+    }
+
+    // IPv4 addresses (exclude loopback)
+    if let Ok(ifaces) = if_addrs::get_if_addrs() {
+        let mut addrs: Vec<String> = vec![];
+        for iface in ifaces {
+            let ip = iface.addr.ip();
+            if ip.is_loopback() { continue; }
+            if let std::net::IpAddr::V4(v4) = ip {
+                addrs.push(v4.to_string());
+            }
+        }
+        if !addrs.is_empty() {
+            out["ips"] = json!(addrs);
+        }
+    }
+
+    // Disks summary
+    let mut disk_list: Vec<serde_json::Value> = vec![];
+    for d in disks.list() {
+        let name = d.name().to_string_lossy().to_string();
+        let mount = d.mount_point().to_string_lossy().to_string();
+        let total_gb = (d.total_space() as f64 / 1024.0 / 1024.0 / 1024.0 * 100.0).round() / 100.0;
+        let avail_gb = (d.available_space() as f64 / 1024.0 / 1024.0 / 1024.0 * 100.0).round() / 100.0;
+        let fs = String::from_utf8_lossy(d.file_system()).to_string();
+        disk_list.push(json!({
+            "name": name,
+            "mount": mount,
+            "total_gb": total_gb,
+            "available_gb": avail_gb,
+            "fs": fs,
+        }));
+    }
+    if !disk_list.is_empty() {
+        out["disks"] = json!(disk_list);
     }
     out
 }

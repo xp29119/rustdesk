@@ -238,9 +238,7 @@ class _ServerPageState extends State<ServerPage> {
                                     child: const Text('登录'),
                                   ),
                                   const Spacer(),
-                                  IconButton(
-                                    icon: const Icon(Icons.info_outline,
-                                        size: 18, color: Colors.grey),
+                                  TextButton.icon(
                                     onPressed: () {
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
@@ -248,7 +246,9 @@ class _ServerPageState extends State<ServerPage> {
                                                 const HardwareInfoPage()),
                                       );
                                     },
-                                    tooltip: '查看硬件信息',
+                                    icon: const Icon(Icons.info_outline,
+                                        size: 18),
+                                    label: const Text('硬件信息'),
                                   ),
                                 ],
                               ),

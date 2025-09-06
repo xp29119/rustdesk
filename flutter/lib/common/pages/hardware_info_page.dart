@@ -50,8 +50,12 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
       _KV('操作系统', m['os']),
       _KV('处理器', m['cpu']),
       _KV('内存', m['memory']),
+      _KV('架构', m['arch']),
+      _KV('平台', m['platform']),
       _KV('主机名', m['hostname']),
       _KV('用户名', m['username']),
+      _KV('内网IP', (m['ips'] is List) ? (m['ips'] as List).join(', ') : m['ips']),
+      _KV('MAC', m['mac']),
     ].where((e) => (e.value ?? '').toString().isNotEmpty || e.label == '电脑型号').toList();
   }
 
@@ -65,6 +69,7 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
 
   @override
   Widget build(BuildContext context) {
+    final disks = (_data?['disks'] as List?)?.cast<Map<String, dynamic>>();
     final actions = <Widget>[
       IconButton(
         tooltip: '刷新',
@@ -92,17 +97,23 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? _ErrorView(error: _error!, onRetry: _load)
-              : ListView.separated(
+              : ListView(
                   padding: const EdgeInsets.all(16),
-                  itemCount: _rows().length,
-                  itemBuilder: (_, i) {
-                    final row = _rows()[i];
-                    if (row.label == '电脑型号') {
-                      return _Header(model: _data?['hostname'] ?? '');
-                    }
-                    return _Item(label: row.label, value: '${row.value ?? ''}');
-                  },
-                  separatorBuilder: (_, __) => const Divider(height: 16),
+                  children: [
+                    ..._rows()
+                        .map((row) => _Item(label: row.label, value: '${row.value ?? ''}'))
+                        .toList(),
+                    if (disks != null && disks.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text('磁盘', style: Theme.of(context).textTheme.titleSmall),
+                      const SizedBox(height: 6),
+                      ...disks.map((d) => _Item(
+                            label: d['name']?.toString() ?? '',
+                            value:
+                                '挂载:${d['mount'] ?? ''}  总:${d['total_gb']}GB  可用:${d['available_gb']}GB  FS:${d['fs'] ?? ''}',
+                          )),
+                    ],
+                  ],
                 ),
     );
   }

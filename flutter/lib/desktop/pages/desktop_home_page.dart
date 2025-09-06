@@ -125,16 +125,15 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     child: const Text('登录'),
                   ),
                   const Spacer(),
-                  IconButton(
-                    tooltip: '查看硬件信息',
-                    icon: const Icon(Icons.info_outline,
-                        size: 16, color: Colors.grey),
+                  TextButton.icon(
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                             builder: (_) => const HardwareInfoPage()),
                       );
                     },
+                    icon: const Icon(Icons.info_outline, size: 16),
+                    label: const Text('硬件信息'),
                   ),
                 ],
               ),
