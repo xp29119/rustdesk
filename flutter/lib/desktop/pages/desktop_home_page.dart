@@ -98,12 +98,20 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           padding: const EdgeInsets.fromLTRB(20, 2, 12, 8),
           child: Row(
             children: [
-              Text(
-                '未登录 · 登录后可远程控制其他设备。',
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              Expanded(
+                child: Text(
+                  '未登录 · 登录后可远程控制其他设备。',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              const Spacer(),
               TextButton(
+                onPressed: () => loginDialog(),
+                child: const Text('登录'),
+              ),
+              IconButton(
+                tooltip: '查看硬件信息',
+                icon: const Icon(Icons.info_outline, size: 16, color: Colors.grey),
                 onPressed: () async {
                   try {
                     final info = await Future.value(bind.mainGetSysinfo());
@@ -118,22 +126,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     );
                   } catch (e) {}
                 },
-                child: const Text('查看硬件信息'),
-              )
+              ),
             ],
           ),
         ),
-      if (gFFI.userModel.userName.value.isEmpty)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 6, 12, 8),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '未登录 · 登录后可远程控制其他设备。',
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-          ),
-        ),
+      // removed duplicate not-logged-in tip here
       FutureBuilder<Widget>(
         future: Future.value(
             Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),

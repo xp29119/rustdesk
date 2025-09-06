@@ -209,39 +209,41 @@ class _ServerPageState extends State<ServerPage> {
                             ? ServerInfo()
                             : ServiceNotRunningNotification(),
                         const ConnectionManager(),
-                        if (gFFI.userModel.userName.value.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                '未登录 · 登录后可远程控制其他设备。',
-                                style: TextStyle(
-                                    color: MyTheme.darkGray, fontSize: 12),
-                              ),
-                            ),
-                          ),
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () async {
-                                try {
-                                  final info = await Future.value(bind.mainGetSysinfo());
-                                  showDialog(
-                                    context: context,
-                                    builder: (_) => AlertDialog(
-                                      title: const Text('硬件信息'),
-                                      content: SingleChildScrollView(
-                                        child: SelectableText(info),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '未登录 · 登录后可远程控制其他设备。',
+                                  style: TextStyle(
+                                      color: MyTheme.darkGray, fontSize: 12),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => loginDialog(),
+                                child: const Text('登录'),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.info_outline, size: 18, color: Colors.grey),
+                                onPressed: () async {
+                                  try {
+                                    final info = await Future.value(bind.mainGetSysinfo());
+                                    showDialog(
+                                      context: context,
+                                      builder: (_) => AlertDialog(
+                                        title: const Text('硬件信息'),
+                                        content: SingleChildScrollView(
+                                          child: SelectableText(info),
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                } catch (e) {}
-                              },
-                              child: const Text('查看硬件信息'),
-                            ),
+                                    );
+                                  } catch (e) {}
+                                },
+                                tooltip: '查看硬件信息',
+                              ),
+                            ],
                           ),
                         ),
                         const PermissionChecker(),
