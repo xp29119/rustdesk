@@ -209,6 +209,18 @@ class _ServerPageState extends State<ServerPage> {
                             ? ServerInfo()
                             : ServiceNotRunningNotification(),
                         const ConnectionManager(),
+                        if (gFFI.userModel.userName.value.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                '未登录 · 登录后可远程控制其他设备。',
+                                style: TextStyle(
+                                    color: MyTheme.darkGray, fontSize: 12),
+                              ),
+                            ),
+                          ),
                         const PermissionChecker(),
                         SizedBox.fromSize(size: const Size(0, 15.0)),
                       ],

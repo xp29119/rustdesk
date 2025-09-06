@@ -80,41 +80,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final isIncomingOnly = bind.isIncomingOnly();
     final isOutgoingOnly = bind.isOutgoingOnly();
     final children = <Widget>[
-      if (gFFI.userModel.userName.value.isEmpty)
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.amber.shade100,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.amber.shade300),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                '未登录状态',
-                style: TextStyle(
-                  color: Colors.red.shade700,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '若需控制其他设备，请登录账号',
-                style: TextStyle(color: Colors.red.shade700),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 36,
-                child: ElevatedButton(
-                  onPressed: () => loginDialog(),
-                  child: Text('登录'),
-                ),
-              ),
-            ],
-          ),
-        ),
       if (!isOutgoingOnly) buildPresetPasswordWarning(),
       if (bind.isCustomClient())
         Align(
@@ -128,6 +93,17 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       buildTip(context),
       if (!isOutgoingOnly) buildIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
+      if (gFFI.userModel.userName.value.isEmpty)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 6, 12, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '未登录 · 登录后可远程控制其他设备。',
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+            ),
+          ),
+        ),
       FutureBuilder<Widget>(
         future: Future.value(
             Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
