@@ -29,7 +29,7 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
       _error = null;
     });
     try {
-      final raw = await Future.value(bind.mainGetSysinfo());
+      final raw = await Future.value(platformFFI.ffiBind.mainGetSysinfo());
       final map = jsonDecode(raw) as Map<String, dynamic>;
       setState(() {
         _data = map;
