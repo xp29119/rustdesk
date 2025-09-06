@@ -4,27 +4,132 @@ pub mod hwinfo_wmi {
     use wmi::{COMLibrary, WMIConnection};
 
     #[derive(serde::Deserialize, Debug)]
-    struct Win32_VideoController { Name: Option<String>, AdapterCompatibility: Option<String> }
+    struct Win32_VideoController {
+        Name: Option<String>,
+        AdapterCompatibility: Option<String>,
+        AdapterRAM: Option<i64>,
+        DriverVersion: Option<String>,
+        CurrentRefreshRate: Option<u32>,
+        CurrentHorizontalResolution: Option<u32>,
+        CurrentVerticalResolution: Option<u32>,
+    }
     #[derive(serde::Deserialize, Debug)]
     struct Win32_BaseBoard { Manufacturer: Option<String>, Product: Option<String> }
     #[derive(serde::Deserialize, Debug)]
-    struct Win32_PhysicalMemory { Manufacturer: Option<String>, PartNumber: Option<String>, Capacity: Option<String> }
+    struct Win32_PhysicalMemory {
+        Manufacturer: Option<String>,
+        PartNumber: Option<String>,
+        Capacity: Option<String>,
+        Speed: Option<u32>,
+        BankLabel: Option<String>,
+        DeviceLocator: Option<String>,
+    }
+    #[derive(serde::Deserialize, Debug)]
+    struct Win32_PhysicalMemoryArray { MemoryDevices: Option<u32>, NumberOfMemoryDevices: Option<u32> }
 
-    pub fn query_hw_info_wmi() -> Result<(Option<serde_json::Value>, Option<serde_json::Value>, Option<serde_json::Value>), ()> {
+    #[derive(serde::Deserialize, Debug)]
+    struct Win32_ComputerSystem { Manufacturer: Option<String>, Model: Option<String> }
+    #[derive(serde::Deserialize, Debug)]
+    struct Win32_OperatingSystem { Caption: Option<String>, Version: Option<String>, BuildNumber: Option<String> }
+    #[derive(serde::Deserialize, Debug)]
+    struct Win32_BIOS { SMBIOSBIOSVersion: Option<String>, Version: Option<String>, ReleaseDate: Option<String> }
+    #[derive(serde::Deserialize, Debug)]
+    struct Win32_DiskDrive { Model: Option<String>, Size: Option<String>, InterfaceType: Option<String>, MediaType: Option<String> }
+    #[derive(serde::Deserialize, Debug)]
+    struct Win32_DesktopMonitor { Name: Option<String>, ScreenWidth: Option<u32>, ScreenHeight: Option<u32> }
+
+    pub fn query_hw_info_wmi() -> Result<(
+        Option<serde_json::Value>, // gpu
+        Option<serde_json::Value>, // board
+        Option<serde_json::Value>, // memory_modules
+        Option<serde_json::Value>, // memory_summary (slot_used/slot_total/frequency)
+        Option<serde_json::Value>, // bios
+        Option<serde_json::Value>, // device
+        Option<serde_json::Value>, // os_detailed
+        Option<serde_json::Value>, // storage list
+        Option<serde_json::Value>, // monitors list
+    ), ()> {
         let com_lib = COMLibrary::new().map_err(|_| ())?;
         let con = WMIConnection::new(com_lib.into()).map_err(|_| ())?;
-        let gpus: Vec<Win32_VideoController> = con.raw_query("SELECT Name, AdapterCompatibility FROM Win32_VideoController").map_err(|_| ())?;
+        let gpus: Vec<Win32_VideoController> = con.raw_query("SELECT Name, AdapterCompatibility, AdapterRAM, DriverVersion, CurrentRefreshRate, CurrentHorizontalResolution, CurrentVerticalResolution FROM Win32_VideoController").map_err(|_| ())?;
         let boards: Vec<Win32_BaseBoard> = con.raw_query("SELECT Manufacturer, Product FROM Win32_BaseBoard").map_err(|_| ())?;
-        let dimms: Vec<Win32_PhysicalMemory> = con.raw_query("SELECT Manufacturer, PartNumber, Capacity FROM Win32_PhysicalMemory").map_err(|_| ())?;
-        let gpu = gpus.get(0).map(|g| json!({"brand": g.AdapterCompatibility, "model": g.Name}));
+        let dimms: Vec<Win32_PhysicalMemory> = con.raw_query("SELECT Manufacturer, PartNumber, Capacity, Speed, BankLabel, DeviceLocator FROM Win32_PhysicalMemory").map_err(|_| ())?;
+        let gpu = gpus.get(0).map(|g| json!({
+            "brand": g.AdapterCompatibility,
+            "model": g.Name,
+            "vram_gb": g.AdapterRAM.map(|b| ((b as f64) / 1024.0 / 1024.0 / 1024.0).round() as i64),
+            "driver_version": g.DriverVersion,
+            "current_resolution": match (g.CurrentHorizontalResolution, g.CurrentVerticalResolution) { (Some(w), Some(h)) => Some(format!("{}x{}", w, h)), _ => None },
+            "current_refresh_hz": g.CurrentRefreshRate,
+        }));
         let board = boards.get(0).map(|b| json!({"brand": b.Manufacturer, "model": b.Product}));
-        let modules: Vec<serde_json::Value> = dimms.iter().map(|d| json!({
+        let slot_used = dimms.len() as u32;
+        let modules: Vec<serde_json::Value> = dimms.iter().enumerate().map(|(i, d)| json!({
+            "slot": d.DeviceLocator.as_ref().or(d.BankLabel.as_ref()).cloned().unwrap_or_else(|| format!("DIMM{}", i+1)),
             "brand": d.Manufacturer,
             "model": d.PartNumber,
             "capacity_bytes": d.Capacity,
+            "speed_mhz": d.Speed,
         })).collect();
         let mem = if modules.is_empty() { None } else { Some(json!(modules)) };
-        Ok((gpu, board, mem))
+        let arrays: Vec<Win32_PhysicalMemoryArray> = con.raw_query("SELECT MemoryDevices, NumberOfMemoryDevices FROM Win32_PhysicalMemoryArray").unwrap_or_default();
+        let slot_total = arrays.get(0).and_then(|a| a.MemoryDevices.or(a.NumberOfMemoryDevices));
+        let mut freq = None;
+        for d in dimms.iter() {
+            if d.Speed.is_some() { freq = d.Speed; break; }
+        }
+        let mem_summary = Some(json!({
+            "slot_used": slot_used,
+            "slot_total": slot_total,
+            "frequency_mhz": freq,
+        }));
+
+        let systems: Vec<Win32_ComputerSystem> = con.raw_query("SELECT Manufacturer, Model FROM Win32_ComputerSystem").unwrap_or_default();
+        let device = systems.get(0).map(|s| json!({
+            "brand": s.Manufacturer,
+            "model": s.Model,
+            "display": match (&s.Manufacturer, &s.Model) { (Some(b), Some(m)) => Some(format!("{} {}", b, m)), (Some(b), None) => Some(b.clone()), (None, Some(m)) => Some(m.clone()), _ => None },
+        }));
+
+        let oses: Vec<Win32_OperatingSystem> = con.raw_query("SELECT Caption, Version, BuildNumber FROM Win32_OperatingSystem").unwrap_or_default();
+        let os = oses.get(0).map(|o| json!({
+            "caption": o.Caption,
+            "version": o.Version,
+            "build": o.BuildNumber,
+            "display": match (&o.Caption, &o.Version, &o.BuildNumber) { (Some(c), Some(v), Some(b)) => Some(format!("{} {} (Build {})", c, v, b)), (Some(c), Some(v), None) => Some(format!("{} {}", c, v)), (Some(c), None, None) => Some(c.clone()), _ => None },
+        }));
+
+        let bioses: Vec<Win32_BIOS> = con.raw_query("SELECT SMBIOSBIOSVersion, Version, ReleaseDate FROM Win32_BIOS").unwrap_or_default();
+        let bios = bioses.get(0).map(|b| json!({
+            "smbios": b.SMBIOSBIOSVersion,
+            "version": b.Version,
+            "release_date": b.ReleaseDate,
+        }));
+
+        let disks: Vec<Win32_DiskDrive> = con.raw_query("SELECT Model, Size, InterfaceType, MediaType FROM Win32_DiskDrive").unwrap_or_default();
+        let storage_list: Vec<serde_json::Value> = disks.into_iter().map(|d| {
+            let size_bytes = d.Size.as_ref().and_then(|s| s.parse::<u64>().ok());
+            let size_gb = size_bytes.map(|b| ((b as f64)/1024.0/1024.0/1024.0).round() as i64);
+            json!({
+                "model": d.Model,
+                "interface": d.InterfaceType,
+                "media_type": d.MediaType,
+                "size_bytes": size_bytes,
+                "size_gb": size_gb,
+            })
+        }).collect();
+        let storage = if storage_list.is_empty() { None } else { Some(json!(storage_list)) };
+
+        let mons: Vec<Win32_DesktopMonitor> = con.raw_query("SELECT Name, ScreenWidth, ScreenHeight FROM Win32_DesktopMonitor").unwrap_or_default();
+        let monitors_list: Vec<serde_json::Value> = mons.into_iter().map(|m| {
+            json!({
+                "name": m.Name,
+                "resolution": match (m.ScreenWidth, m.ScreenHeight) { (Some(w), Some(h)) => Some(format!("{}x{}", w, h)), _ => None },
+            })
+        }).collect();
+        let monitors = if monitors_list.is_empty() { None } else { Some(json!(monitors_list)) };
+
+        Ok((gpu, board, mem, mem_summary, bios, device, os, storage, monitors))
     }
 
     pub fn query_external_ip() -> Option<(String, String)> {

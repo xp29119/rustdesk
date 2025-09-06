@@ -867,10 +867,16 @@ pub fn get_sysinfo() -> serde_json::Value {
     // Windows-only: try to enrich with GPU / motherboard / memory modules and external IP
     #[cfg(target_os = "windows")]
     {
-        if let Ok((gpu, board, dimms)) = crate::platform::windows::hwinfo_wmi::query_hw_info_wmi() {
+        if let Ok((gpu, board, dimms, mem_summary, bios, device, os_detailed, storage, monitors)) = crate::platform::windows::hwinfo_wmi::query_hw_info_wmi() {
             if let Some(g) = gpu { out["gpu"] = json!(g); }
             if let Some(b) = board { out["mainboard"] = json!(b); }
             if let Some(ds) = dimms { out["memory_modules"] = json!(ds); }
+            if let Some(ms) = mem_summary { out["memory_summary"] = json!(ms); }
+            if let Some(b) = bios { out["bios"] = json!(b); }
+            if let Some(d) = device { out["device"] = json!(d); }
+            if let Some(o) = os_detailed { out["os_detailed"] = json!(o); }
+            if let Some(s) = storage { out["storage"] = json!(s); }
+            if let Some(m) = monitors { out["monitors"] = json!(m); }
         }
         if let Some((wan_ip, isp)) = crate::platform::windows::hwinfo_wmi::query_external_ip() {
             out["wan_ip"] = json!(wan_ip);
