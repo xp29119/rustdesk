@@ -844,7 +844,7 @@ pub fn get_sysinfo() -> serde_json::Value {
     }
     let hostname = hostname(); // sys.hostname() return localhost on android in my test
     #[cfg(any(target_os = "android", target_os = "ios"))]
-    let out;
+    let mut out;
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     let mut out;
     out = json!({
