@@ -93,6 +93,12 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
     final gpu = (_data?['gpu'] as Map?)?.cast<String, dynamic>();
     final board = (_data?['mainboard'] as Map?)?.cast<String, dynamic>();
     final memModules = (_data?['memory_modules'] as List?)?.cast<Map<String, dynamic>>();
+    final memSummary = (_data?['memory_summary'] as Map?)?.cast<String, dynamic>();
+    final storage = (_data?['storage'] as List?)?.cast<Map<String, dynamic>>();
+    final monitors = (_data?['monitors'] as List?)?.cast<Map<String, dynamic>>();
+    final osDetailed = (_data?['os_detailed'] as Map?)?.cast<String, dynamic>();
+    final device = (_data?['device'] as Map?)?.cast<String, dynamic>();
+    final bios = (_data?['bios'] as Map?)?.cast<String, dynamic>();
     final actions = <Widget>[
       IconButton(
         tooltip: '刷新',
@@ -141,12 +147,17 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
                         ..._rows()
                             .where((e) => ['处理器'].contains(e.label))
                             .map((row) => _Item(label: row.label, value: '${row.value ?? ''}', leading: const Icon(Icons.memory, size: 16))),
-                        if (gpu != null)
+                        if (gpu != null) ...[
                           _Item(
                             label: '显卡',
                             leading: const Icon(Icons.monitor, size: 16),
                             value: [gpu['brand'], gpu['model']].where((e) => (e ?? '').toString().isNotEmpty).join(' '),
                           ),
+                          if (gpu['vram_gb'] != null)
+                            _Item(label: '显存', value: '${gpu['vram_gb']} GB'),
+                          if (gpu['driver_version'] != null)
+                            _Item(label: '驱动版本', value: '${gpu['driver_version']}'),
+                        ],
                       ],
                     ),
                     if (board != null) ...[
@@ -173,6 +184,13 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
                         ..._rows()
                             .where((e) => ['内存'].contains(e.label))
                             .map((row) => _Item(label: row.label, value: '${row.value ?? ''}', leading: const Icon(Icons.sd_storage, size: 16))),
+                        if (memSummary != null) ...[
+                          Row(children: [
+                            Expanded(child: _Item(label: '槽位使用', value: '${memSummary['slot_used'] ?? ''} / ${memSummary['slot_total'] ?? ''}')),
+                            const SizedBox(width: 12),
+                            Expanded(child: _Item(label: '频率', value: memSummary['frequency_mhz'] == null ? '' : '${memSummary['frequency_mhz']} MHz')),
+                          ]),
+                        ],
                         if (memModules != null && memModules.isNotEmpty) ...[
                           for (var i = 0; i < memModules.length; i++)
                             _Item(
@@ -183,16 +201,51 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
                         ],
                       ],
                     ),
-                    if (disks != null && disks.isNotEmpty) ...[
+                    if (bios != null || device != null || osDetailed != null) ...[
+                      const SizedBox(height: 12),
+                      _CollapsibleSection(
+                        title: '系统',
+                        initiallyExpanded: true,
+                        items: [
+                          if (device != null)
+                            _Item(label: '设备名称', value: '${device['display'] ?? ''}'),
+                          if (osDetailed != null)
+                            _Item(label: '操作系统', value: '${osDetailed['display'] ?? ''}'),
+                          if (bios != null && bios['version'] != null)
+                            _Item(label: 'BIOS 版本', value: '${bios['version']}'),
+                        ],
+                      ),
+                    ],
+                    if ((storage != null && storage.isNotEmpty) || (disks != null && disks.isNotEmpty)) ...[
                       const SizedBox(height: 12),
                       _CollapsibleSection(
                         title: '磁盘',
                         initiallyExpanded: false,
                         items: [
-                          ...disks.map((d) => _Item(
-                                label: d['name']?.toString() ?? '',
-                                value:
-                                    '挂载:${d['mount'] ?? ''}  总:${d['total_gb']}GB  可用:${d['available_gb']}GB  FS:${d['fs'] ?? ''}',
+                          if (storage != null && storage.isNotEmpty) ...[
+                            ...storage.map((d) => _Item(
+                                  label: (d['model'] ?? '').toString(),
+                                  value: '接口:${d['interface'] ?? ''}  容量:${d['size_gb'] ?? ''}GB  类型:${d['media_type'] ?? ''}',
+                                )),
+                          ] else if (disks != null) ...[
+                            ...disks.map((d) => _Item(
+                                  label: d['name']?.toString() ?? '',
+                                  value:
+                                      '挂载:${d['mount'] ?? ''}  总:${d['total_gb']}GB  可用:${d['available_gb']}GB  FS:${d['fs'] ?? ''}',
+                                )),
+                          ],
+                        ],
+                      ),
+                    ],
+                    if (monitors != null && monitors.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _CollapsibleSection(
+                        title: '显示器',
+                        initiallyExpanded: false,
+                        items: [
+                          ...monitors.map((m) => _Item(
+                                label: (m['name'] ?? '').toString(),
+                                value: '${m['resolution'] ?? ''}',
                               )),
                         ],
                       ),
@@ -203,14 +256,19 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
                         title: '网络',
                         initiallyExpanded: false,
                         items: [
-                          ...nics.map((n) => _Item(
-                                label: n['name']?.toString() ?? '',
-                                leading: const Icon(Icons.network_check, size: 16),
-                                value: 'IPv4: ${n['ipv4'] ?? ''}',
-                                trailing: (n['speed_mbps'] ?? n['speed']) == null
-                                    ? null
-                                    : _SpeedChip(speed: (n['speed_mbps'] ?? n['speed']).toString()),
-                              )),
+                          ...nics.map((n) {
+                            final isWifi = n['is_wireless'] == true;
+                            final icon = isWifi ? Icons.wifi : Icons.settings_ethernet;
+                            final extra = isWifi ? (n['wifi_gen'] ?? '') : '';
+                            return _Item(
+                              label: n['name']?.toString() ?? '',
+                              leading: Icon(icon, size: 16),
+                              value: 'IPv4: ${n['ipv4'] ?? ''}${extra.toString().isNotEmpty ? '  ($extra)' : ''}',
+                              trailing: (n['speed_mbps'] ?? n['speed']) == null
+                                  ? null
+                                  : _SpeedChip(speed: (n['speed_mbps'] ?? n['speed']).toString()),
+                            );
+                          }),
                         ],
                       ),
                     ],
