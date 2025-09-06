@@ -70,6 +70,7 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
   @override
   Widget build(BuildContext context) {
     final disks = (_data?['disks'] as List?)?.cast<Map<String, dynamic>>();
+    final nics = (_data?['nics'] as List?)?.cast<Map<String, dynamic>>();
     final actions = <Widget>[
       IconButton(
         tooltip: '刷新',
@@ -111,6 +112,15 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
                             label: d['name']?.toString() ?? '',
                             value:
                                 '挂载:${d['mount'] ?? ''}  总:${d['total_gb']}GB  可用:${d['available_gb']}GB  FS:${d['fs'] ?? ''}',
+                          )),
+                    ],
+                    if (nics != null && nics.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text('网络', style: Theme.of(context).textTheme.titleSmall),
+                      const SizedBox(height: 6),
+                      ...nics.map((n) => _Item(
+                            label: n['name']?.toString() ?? '',
+                            value: 'IPv4: ${n['ipv4'] ?? ''}',
                           )),
                     ],
                   ],

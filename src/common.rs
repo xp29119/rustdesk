@@ -870,19 +870,23 @@ pub fn get_sysinfo() -> serde_json::Value {
         out["mac"] = json!(ma.to_string());
     }
 
-    // IPv4 addresses (exclude loopback)
+    // IPv4 addresses + Nics (exclude loopback)
     if let Ok(ifaces) = if_addrs::get_if_addrs() {
         let mut addrs: Vec<String> = vec![];
+        let mut nics: Vec<serde_json::Value> = vec![];
         for iface in ifaces {
             let ip = iface.addr.ip();
             if ip.is_loopback() { continue; }
             if let std::net::IpAddr::V4(v4) = ip {
                 addrs.push(v4.to_string());
+                nics.push(json!({
+                    "name": iface.name,
+                    "ipv4": v4.to_string(),
+                }));
             }
         }
-        if !addrs.is_empty() {
-            out["ips"] = json!(addrs);
-        }
+        if !addrs.is_empty() { out["ips"] = json!(addrs); }
+        if !nics.is_empty() { out["nics"] = json!(nics); }
     }
 
     // Disks summary
