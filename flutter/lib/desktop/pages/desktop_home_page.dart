@@ -95,29 +95,48 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       if (!isOutgoingOnly) buildIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
       if (!isOutgoingOnly)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 2, 12, 8),
-          child: Row(
+        Container(
+          margin: const EdgeInsets.fromLTRB(20, 2, 12, 8),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.grey.withOpacity(0.25)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  '未登录 · 登录后可远程控制其他设备。',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  overflow: TextOverflow.ellipsis,
-                ),
+              Text(
+                '未登录状态',
+                style: TextStyle(
+                    color: Colors.red.shade400, fontWeight: FontWeight.bold),
               ),
-              TextButton(
-                onPressed: () => loginDialog(),
-                child: const Text('登录'),
+              const SizedBox(height: 6),
+              const Text(
+                '若需控制其他设备，请登录账号',
+                style: TextStyle(color: Colors.grey, fontSize: 14),
+                softWrap: true,
               ),
-              IconButton(
-                tooltip: '查看硬件信息',
-                icon: const Icon(Icons.info_outline, size: 16, color: Colors.grey),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const HardwareInfoPage()),
-                  );
-                },
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  ElevatedButton(
+                    onPressed: () => loginDialog(),
+                    child: const Text('登录'),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: '查看硬件信息',
+                    icon: const Icon(Icons.info_outline,
+                        size: 16, color: Colors.grey),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const HardwareInfoPage()),
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),

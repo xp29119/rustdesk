@@ -210,30 +210,47 @@ class _ServerPageState extends State<ServerPage> {
                             ? ServerInfo()
                             : ServiceNotRunningNotification(),
                         const ConnectionManager(),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-                          child: Row(
+                        Container(
+                          margin: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.grey.withOpacity(0.25)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  '未登录 · 登录后可远程控制其他设备。',
+                              Text('未登录状态',
                                   style: TextStyle(
-                                      color: MyTheme.darkGray, fontSize: 12),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () => loginDialog(),
-                                child: const Text('登录'),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.info_outline, size: 18, color: Colors.grey),
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(builder: (_) => const HardwareInfoPage()),
-                                  );
-                                },
-                                tooltip: '查看硬件信息',
+                                      color: Colors.red.shade400,
+                                      fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 6),
+                              const Text('若需控制其他设备，请登录账号',
+                                  style: TextStyle(
+                                      color: Colors.grey, fontSize: 14),
+                                  softWrap: true),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: () => loginDialog(),
+                                    child: const Text('登录'),
+                                  ),
+                                  const Spacer(),
+                                  IconButton(
+                                    icon: const Icon(Icons.info_outline,
+                                        size: 18, color: Colors.grey),
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                const HardwareInfoPage()),
+                                      );
+                                    },
+                                    tooltip: '查看硬件信息',
+                                  ),
+                                ],
                               ),
                             ],
                           ),
