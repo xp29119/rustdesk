@@ -1,3 +1,46 @@
+#[cfg(target_os = "windows")]
+pub mod hwinfo_wmi {
+    use serde_json::json;
+    use wmi::{COMLibrary, WMIConnection};
+
+    #[derive(serde::Deserialize, Debug)]
+    struct Win32_VideoController { Name: Option<String>, AdapterCompatibility: Option<String> }
+    #[derive(serde::Deserialize, Debug)]
+    struct Win32_BaseBoard { Manufacturer: Option<String>, Product: Option<String> }
+    #[derive(serde::Deserialize, Debug)]
+    struct Win32_PhysicalMemory { Manufacturer: Option<String>, PartNumber: Option<String>, Capacity: Option<String> }
+
+    pub fn query_hw_info_wmi() -> Result<(Option<serde_json::Value>, Option<serde_json::Value>, Option<serde_json::Value>), ()> {
+        let com_lib = COMLibrary::new().map_err(|_| ())?;
+        let con = WMIConnection::new(com_lib.into()).map_err(|_| ())?;
+        let gpus: Vec<Win32_VideoController> = con.raw_query("SELECT Name, AdapterCompatibility FROM Win32_VideoController").map_err(|_| ())?;
+        let boards: Vec<Win32_BaseBoard> = con.raw_query("SELECT Manufacturer, Product FROM Win32_BaseBoard").map_err(|_| ())?;
+        let dimms: Vec<Win32_PhysicalMemory> = con.raw_query("SELECT Manufacturer, PartNumber, Capacity FROM Win32_PhysicalMemory").map_err(|_| ())?;
+        let gpu = gpus.get(0).map(|g| json!({"brand": g.AdapterCompatibility, "model": g.Name}));
+        let board = boards.get(0).map(|b| json!({"brand": b.Manufacturer, "model": b.Product}));
+        let modules: Vec<serde_json::Value> = dimms.iter().map(|d| json!({
+            "brand": d.Manufacturer,
+            "model": d.PartNumber,
+            "capacity_bytes": d.Capacity,
+        })).collect();
+        let mem = if modules.is_empty() { None } else { Some(json!(modules)) };
+        Ok((gpu, board, mem))
+    }
+
+    pub fn query_external_ip() -> Option<(String, String)> {
+        use std::time::Duration;
+        if let Ok(resp) = reqwest::blocking::Client::builder()
+            .timeout(Duration::from_secs(3))
+            .build()
+            .and_then(|c| c.get("https://api.ipify.org?format=json").send())
+        {
+            if let Ok(v) = resp.json::<serde_json::Value>() {
+                return v.get("ip").and_then(|x| x.as_str()).map(|ip| (ip.to_string(), String::new()));
+            }
+        }
+        None
+    }
+}
 use super::{CursorData, ResultType};
 use crate::{
     common::PORTABLE_APPNAME_RUNTIME_ENV_KEY,

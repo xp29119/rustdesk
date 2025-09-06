@@ -99,9 +99,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           margin: const EdgeInsets.fromLTRB(20, 2, 12, 8),
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.12),
+            color: Colors.amber.withOpacity(0.15),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.grey.withOpacity(0.25)),
+            border: Border.all(color: Colors.amber.withOpacity(0.35)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

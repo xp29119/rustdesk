@@ -180,12 +180,15 @@ class _Item extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 80,
+          width: 110,
           child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
+          child: SelectableText(
+            value,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
         ),
       ],
     );

@@ -864,6 +864,20 @@ pub fn get_sysinfo() -> serde_json::Value {
     out["arch"] = json!(std::env::consts::ARCH);
     out["platform"] = json!(std::env::consts::OS);
 
+    // Windows-only: try to enrich with GPU / motherboard / memory modules and external IP
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok((gpu, board, dimms)) = crate::platform::windows::hwinfo_wmi::query_hw_info_wmi() {
+            if let Some(g) = gpu { out["gpu"] = json!(g); }
+            if let Some(b) = board { out["mainboard"] = json!(b); }
+            if let Some(ds) = dimms { out["memory_modules"] = json!(ds); }
+        }
+        if let Some((wan_ip, isp)) = crate::platform::windows::hwinfo_wmi::query_external_ip() {
+            out["wan_ip"] = json!(wan_ip);
+            if !isp.is_empty() { out["wan_isp"] = json!(isp); }
+        }
+    }
+
     // MAC address (best effort, desktop platforms only)
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     if let Ok(Some(ma)) = hbb_common::mac_address::get_mac_address() {
