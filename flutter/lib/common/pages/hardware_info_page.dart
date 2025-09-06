@@ -101,27 +101,48 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    ..._rows()
-                        .map((row) => _Item(label: row.label, value: '${row.value ?? ''}'))
-                        .toList(),
+                    _SectionCard(
+                      title: '基本信息',
+                      items: [
+                        ..._rows()
+                            .where((e) => ['电脑型号','主机名','操作系统','平台','架构','用户名','内网IP','MAC']
+                                .contains(e.label))
+                            .map((row) => _Item(label: row.label, value: '${row.value ?? ''}')),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _SectionCard(
+                      title: '处理器 / 内存',
+                      items: [
+                        ..._rows()
+                            .where((e) => ['处理器','内存'].contains(e.label))
+                            .map((row) => _Item(label: row.label, value: '${row.value ?? ''}')),
+                      ],
+                    ),
                     if (disks != null && disks.isNotEmpty) ...[
                       const SizedBox(height: 12),
-                      Text('磁盘', style: Theme.of(context).textTheme.titleSmall),
-                      const SizedBox(height: 6),
-                      ...disks.map((d) => _Item(
-                            label: d['name']?.toString() ?? '',
-                            value:
-                                '挂载:${d['mount'] ?? ''}  总:${d['total_gb']}GB  可用:${d['available_gb']}GB  FS:${d['fs'] ?? ''}',
-                          )),
+                      _SectionCard(
+                        title: '磁盘',
+                        items: [
+                          ...disks.map((d) => _Item(
+                                label: d['name']?.toString() ?? '',
+                                value:
+                                    '挂载:${d['mount'] ?? ''}  总:${d['total_gb']}GB  可用:${d['available_gb']}GB  FS:${d['fs'] ?? ''}',
+                              )),
+                        ],
+                      ),
                     ],
                     if (nics != null && nics.isNotEmpty) ...[
                       const SizedBox(height: 12),
-                      Text('网络', style: Theme.of(context).textTheme.titleSmall),
-                      const SizedBox(height: 6),
-                      ...nics.map((n) => _Item(
-                            label: n['name']?.toString() ?? '',
-                            value: 'IPv4: ${n['ipv4'] ?? ''}',
-                          )),
+                      _SectionCard(
+                        title: '网络',
+                        items: [
+                          ...nics.map((n) => _Item(
+                                label: n['name']?.toString() ?? '',
+                                value: 'IPv4: ${n['ipv4'] ?? ''}',
+                              )),
+                        ],
+                      ),
                     ],
                   ],
                 ),
@@ -169,6 +190,39 @@ class _Item extends StatelessWidget {
       ],
     );
   }
+}
+
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final List<Widget> items;
+  const _SectionCard({required this.title, required this.items});
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0.5,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            ..._intersperse(items, const Divider(height: 16)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+List<Widget> _intersperse(List<Widget> list, Widget separator) {
+  if (list.isEmpty) return list;
+  return [
+    for (int i = 0; i < list.length; i++) ...[
+      list[i],
+      if (i != list.length - 1) separator,
+    ]
+  ];
 }
 
 class _ErrorView extends StatelessWidget {
