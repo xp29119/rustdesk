@@ -885,9 +885,9 @@ pub fn get_sysinfo() -> serde_json::Value {
     }
 
     // IPv4 addresses + Nics (exclude loopback)
+    let mut addrs: Vec<String> = vec![];
+    let mut nics: Vec<serde_json::Value> = vec![];
     if let Ok(ifaces) = if_addrs::get_if_addrs() {
-        let mut addrs: Vec<String> = vec![];
-        let mut nics: Vec<serde_json::Value> = vec![];
         for iface in ifaces {
             let ip = iface.addr.ip();
             if ip.is_loopback() { continue; }
@@ -899,9 +899,25 @@ pub fn get_sysinfo() -> serde_json::Value {
                 }));
             }
         }
-        if !addrs.is_empty() { out["ips"] = json!(addrs); }
-        if !nics.is_empty() { out["nics"] = json!(nics); }
     }
+    #[cfg(target_os = "windows")]
+    if let Some(mut extra) = crate::platform::windows::hwinfo_wmi::query_nic_info_wmi() {
+        // merge by name when possible
+        for e in extra.drain(..) {
+            let ename = e.get("name").and_then(|x| x.as_str()).unwrap_or("").to_string();
+            if ename.is_empty() { nics.push(e); continue; }
+            if let Some(existing) = nics.iter_mut().find(|v| v.get("name").and_then(|x| x.as_str()) == Some(ename.as_str())) {
+                // augment existing
+                for (k,v) in e.as_object().unwrap().iter() {
+                    if existing.get(k).is_none() || existing.get(k).unwrap().is_null() { existing[k] = v.clone(); }
+                }
+            } else {
+                nics.push(e);
+            }
+        }
+    }
+    if !addrs.is_empty() { out["ips"] = json!(addrs); }
+    if !nics.is_empty() { out["nics"] = json!(nics); }
 
     // Disks summary
     let mut disk_list: Vec<serde_json::Value> = vec![];

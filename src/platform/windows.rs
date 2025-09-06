@@ -40,6 +40,53 @@ pub mod hwinfo_wmi {
         }
         None
     }
+
+    #[derive(serde::Deserialize, Debug)]
+    struct Win32_NetworkAdapter {
+        Name: Option<String>,
+        NetConnectionID: Option<String>,
+        Manufacturer: Option<String>,
+        PNPDeviceID: Option<String>,
+        Speed: Option<i64>, // bits per second
+        PhysicalAdapter: Option<bool>,
+        NetEnabled: Option<bool>,
+    }
+
+    pub fn query_nic_info_wmi() -> Option<Vec<serde_json::Value>> {
+        let com_lib = COMLibrary::new().ok()?;
+        let con = WMIConnection::new(com_lib.into()).ok()?;
+        let q = "SELECT Name, NetConnectionID, Manufacturer, PNPDeviceID, Speed, PhysicalAdapter, NetEnabled FROM Win32_NetworkAdapter WHERE PhysicalAdapter = TRUE";
+        let adapters: Vec<Win32_NetworkAdapter> = con.raw_query(q).ok()?;
+        let mut out = Vec::new();
+        for a in adapters.into_iter() {
+            // Skip clearly disabled virtual entries if we can detect
+            if let Some(enabled) = a.NetEnabled {
+                if !enabled { continue; }
+            }
+            let name = a.NetConnectionID.as_ref().or(a.Name.as_ref()).cloned();
+            if name.is_none() { continue; }
+            let mbps = a.Speed.map(|b| (b / 1_000_000).max(0));
+            let pretty = mbps.map(|m| {
+                if m >= 40_000 { "40G".to_string() }
+                else if m >= 25_000 { "25G".to_string() }
+                else if m >= 10_000 { "10G".to_string() }
+                else if (m - 2_500).abs() <= 200 { "2.5G".to_string() }
+                else if m >= 5_000 { "5G".to_string() }
+                else if m >= 1_000 { "1G".to_string() }
+                else if m >= 100 { "100M".to_string() }
+                else { format!("{}Mbps", m) }
+            });
+            out.push(json!({
+                "name": name,
+                "brand": a.Manufacturer,
+                "model": a.Name,
+                "pnp_id": a.PNPDeviceID,
+                "speed_mbps": mbps,
+                "speed": pretty,
+            }));
+        }
+        if out.is_empty() { None } else { Some(out) }
+    }
 }
 use super::{CursorData, ResultType};
 use crate::{
