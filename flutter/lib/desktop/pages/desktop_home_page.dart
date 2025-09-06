@@ -10,6 +10,7 @@ import 'package:flutter_hbb/common/widgets/animated_rotation_widget.dart';
 import 'package:flutter_hbb/common/widgets/custom_password.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
+import 'package:flutter_hbb/common/pages/hardware_info_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
 import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
@@ -112,19 +113,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               IconButton(
                 tooltip: '查看硬件信息',
                 icon: const Icon(Icons.info_outline, size: 16, color: Colors.grey),
-                onPressed: () async {
-                  try {
-                    final info = await Future.value(bind.mainGetSysinfo());
-                    showDialog(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: const Text('硬件信息'),
-                        content: SingleChildScrollView(
-                          child: SelectableText(info),
-                        ),
-                      ),
-                    );
-                  } catch (e) {}
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const HardwareInfoPage()),
+                  );
                 },
               ),
             ],

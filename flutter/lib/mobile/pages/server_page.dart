@@ -15,6 +15,7 @@ import '../../models/platform_model.dart';
 import '../../models/server_model.dart';
 import 'home_page.dart';
 import 'package:flutter_hbb/mobile/pages/settings_page.dart';
+import 'package:flutter_hbb/common/pages/hardware_info_page.dart';
 import 'package:flutter_hbb/common/widgets/login.dart';
 
 class ServerPage extends StatefulWidget implements PageShape {
@@ -227,19 +228,10 @@ class _ServerPageState extends State<ServerPage> {
                               ),
                               IconButton(
                                 icon: const Icon(Icons.info_outline, size: 18, color: Colors.grey),
-                                onPressed: () async {
-                                  try {
-                                    final info = await Future.value(bind.mainGetSysinfo());
-                                    showDialog(
-                                      context: context,
-                                      builder: (_) => AlertDialog(
-                                        title: const Text('硬件信息'),
-                                        content: SingleChildScrollView(
-                                          child: SelectableText(info),
-                                        ),
-                                      ),
-                                    );
-                                  } catch (e) {}
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => const HardwareInfoPage()),
+                                  );
                                 },
                                 tooltip: '查看硬件信息',
                               ),
