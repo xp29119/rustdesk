@@ -1588,6 +1588,10 @@ pub fn main_get_fingerprint() -> String {
     get_fingerprint()
 }
 
+pub fn main_get_sysinfo() -> String {
+    serde_json::to_string(&crate::common::get_sysinfo()).unwrap_or_default()
+}
+
 pub fn cm_get_clients_state() -> String {
     crate::ui_cm_interface::get_clients_state()
 }

@@ -221,6 +221,29 @@ class _ServerPageState extends State<ServerPage> {
                               ),
                             ),
                           ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () async {
+                                try {
+                                  final info = await Future.value(bind.mainGetSysinfo());
+                                  showDialog(
+                                    context: context,
+                                    builder: (_) => AlertDialog(
+                                      title: const Text('硬件信息'),
+                                      content: SingleChildScrollView(
+                                        child: SelectableText(info),
+                                      ),
+                                    ),
+                                  );
+                                } catch (e) {}
+                              },
+                              child: const Text('查看硬件信息'),
+                            ),
+                          ),
+                        ),
                         const PermissionChecker(),
                         SizedBox.fromSize(size: const Size(0, 15.0)),
                       ],

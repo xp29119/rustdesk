@@ -93,6 +93,36 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       buildTip(context),
       if (!isOutgoingOnly) buildIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
+      if (!isOutgoingOnly)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 2, 12, 8),
+          child: Row(
+            children: [
+              Text(
+                '未登录 · 登录后可远程控制其他设备。',
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () async {
+                  try {
+                    final info = await Future.value(bind.mainGetSysinfo());
+                    showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text('硬件信息'),
+                        content: SingleChildScrollView(
+                          child: SelectableText(info),
+                        ),
+                      ),
+                    );
+                  } catch (e) {}
+                },
+                child: const Text('查看硬件信息'),
+              )
+            ],
+          ),
+        ),
       if (gFFI.userModel.userName.value.isEmpty)
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 6, 12, 8),
