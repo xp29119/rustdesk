@@ -23,6 +23,23 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
     _load();
   }
 
+  String _formatMemModule(Map<String, dynamic> m) {
+    final brand = (m['brand'] ?? '').toString().trim();
+    final model = (m['model'] ?? '').toString().trim();
+    final cap = (m['capacity_bytes'] ?? '').toString();
+    String pretty = '';
+    if (brand.isNotEmpty) pretty = brand;
+    if (model.isNotEmpty) pretty = [pretty, model].where((e) => e.isNotEmpty).join(' ');
+    if (cap.isNotEmpty) {
+      final n = int.tryParse(cap) ?? 0;
+      final gb = n > 0 ? (n / 1024 / 1024 / 1024).toStringAsFixed(0) : '';
+      if (gb.isNotEmpty) {
+        pretty = [pretty, '${gb}GB'].where((e) => e.isNotEmpty).join(' ');
+      }
+    }
+    return pretty.isEmpty ? cap : pretty;
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -55,6 +72,7 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
       _KV('主机名', m['hostname']),
       _KV('用户名', m['username']),
       _KV('内网IP', (m['ips'] is List) ? (m['ips'] as List).join(', ') : m['ips']),
+      _KV('外网IP', m['wan_ip']),
       _KV('MAC', m['mac']),
     ].where((e) => (e.value ?? '').toString().isNotEmpty || e.label == '电脑型号').toList();
   }
@@ -71,6 +89,9 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
   Widget build(BuildContext context) {
     final disks = (_data?['disks'] as List?)?.cast<Map<String, dynamic>>();
     final nics = (_data?['nics'] as List?)?.cast<Map<String, dynamic>>();
+    final gpu = (_data?['gpu'] as Map?)?.cast<String, dynamic>();
+    final board = (_data?['mainboard'] as Map?)?.cast<String, dynamic>();
+    final memModules = (_data?['memory_modules'] as List?)?.cast<Map<String, dynamic>>();
     final actions = <Widget>[
       IconButton(
         tooltip: '刷新',
@@ -105,18 +126,53 @@ class _HardwareInfoPageState extends State<HardwareInfoPage> {
                       title: '基本信息',
                       items: [
                         ..._rows()
-                            .where((e) => ['电脑型号','主机名','操作系统','平台','架构','用户名','内网IP','MAC']
+                            .where((e) => ['电脑型号','主机名','操作系统','平台','架构','外网IP','内网IP','用户名','MAC']
                                 .contains(e.label))
                             .map((row) => _Item(label: row.label, value: '${row.value ?? ''}')),
                       ],
                     ),
                     const SizedBox(height: 12),
                     _SectionCard(
-                      title: '处理器 / 内存',
+                      title: '处理器 / 显卡',
                       items: [
                         ..._rows()
-                            .where((e) => ['处理器','内存'].contains(e.label))
+                            .where((e) => ['处理器'].contains(e.label))
                             .map((row) => _Item(label: row.label, value: '${row.value ?? ''}')),
+                        if (gpu != null)
+                          _Item(
+                            label: '显卡',
+                            value: [gpu['brand'], gpu['model']].where((e) => (e ?? '').toString().isNotEmpty).join(' '),
+                          ),
+                      ],
+                    ),
+                    if (board != null) ...[
+                      const SizedBox(height: 12),
+                      _SectionCard(
+                        title: '主板',
+                        items: [
+                          _Item(
+                            label: '主板',
+                            value: [board['brand'], board['model']]
+                                .where((e) => (e ?? '').toString().isNotEmpty)
+                                .join(' '),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    _SectionCard(
+                      title: '内存',
+                      items: [
+                        ..._rows()
+                            .where((e) => ['内存'].contains(e.label))
+                            .map((row) => _Item(label: row.label, value: '${row.value ?? ''}')),
+                        if (memModules != null && memModules.isNotEmpty) ...[
+                          for (var i = 0; i < memModules.length; i++)
+                            _Item(
+                              label: '内存条${i + 1}',
+                              value: _formatMemModule(memModules[i]),
+                            ),
+                        ],
                       ],
                     ),
                     if (disks != null && disks.isNotEmpty) ...[
