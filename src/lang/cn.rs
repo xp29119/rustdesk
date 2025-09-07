@@ -219,7 +219,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("verification_tip", "已向注册邮箱发送了登录验证码，请输入验证码继续登录"),
         ("Logout", "登出"),
         // 新增：桌面端登录提示与对话框
-        ("login_required_hint_under_input", "需登录后才能发起远程控制"),
+        ("login_required_hint_under_input", "登录后才能控制其他设备"),
         ("login_required_dialog_title", "连接失败"),
         ("login_required_dialog_body", "未登录状态无法控制远程设备，请先登录后再试。"),
         ("login_required_dialog_title2", "需要登录"),
