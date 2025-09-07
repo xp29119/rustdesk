@@ -511,19 +511,20 @@ class _ConnectionPageState extends State<ConnectionPage>
                     )),
               ],
             ),
-            Offstage(
-              offstage: !(isWindows || isMacOS) || gFFI.userModel.isLogin,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  translate('login_required_hint_under_input'),
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: Colors.grey),
-                ).marginOnly(top: 6),
-              ),
-            ),
+            Obx(() {
+              final textColor = Theme.of(context).textTheme.titleLarge?.color;
+              return Offstage(
+                offstage: !(isWindows || isMacOS) || gFFI.userModel.isLogin,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    translate('login_required_hint_under_input'),
+                    style: TextStyle(
+                        fontSize: 14, color: textColor?.withOpacity(0.5)),
+                  ).marginOnly(top: 6),
+                ),
+              );
+            }),
             Padding(
               padding: const EdgeInsets.only(top: 13.0),
               child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [

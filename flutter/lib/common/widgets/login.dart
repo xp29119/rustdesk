@@ -602,14 +602,16 @@ Future<bool?> loginDialog() async {
           if (isDesktop)
             Padding(
               padding: const EdgeInsets.only(top: 10),
-              child: Text(
-                translate('login_dialog_footer_note'),
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: Colors.grey),
-                textAlign: TextAlign.center,
-              ),
+              child: Builder(builder: (context) {
+                final textColor =
+                    Theme.of(context).textTheme.titleLarge?.color;
+                return Text(
+                  translate('login_dialog_footer_note'),
+                  style: TextStyle(
+                      fontSize: 14, color: textColor?.withOpacity(0.5)),
+                  textAlign: TextAlign.center,
+                );
+              }),
             ),
         ],
       ),

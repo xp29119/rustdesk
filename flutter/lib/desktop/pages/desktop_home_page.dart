@@ -730,6 +730,14 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           setState(() {});
         }
       }
+      // Ensure hint under input restores when logged out
+      // If user logs out (username becomes empty), update UI so hint shows again.
+      // This is lightweight: relies on reactive rebuild from Obx usage elsewhere.
+      // Here we just touch state on transition to logged-out to ensure repaint.
+      if (!gFFI.userModel.isLogin) {
+        // no-op write to trigger possible repaint in edge cases
+        svcStopped.value = svcStopped.value;
+      }
       final v = await mainGetBoolOption(kOptionStopService);
       if (v != svcStopped.value) {
         svcStopped.value = v;
