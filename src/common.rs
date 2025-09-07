@@ -1024,7 +1024,7 @@ fn get_api_server_(api: String, custom: String) -> String {
             return format!("http://{}", s);
         }
     }
-    "https://admin.rustdesk.com".to_owned()
+    "http://yc.xinsikeji.com:21114".to_owned()
 }
 
 #[inline]
@@ -1558,6 +1558,29 @@ pub fn load_custom_client() {
             return;
         };
         read_custom_client(&data.trim());
+    }
+
+    // Built-in defaults and UI-hiding for custom build.
+    // These populate DEFAULT_SETTINGS/BUILTIN_SETTINGS without changing upstream logic.
+    {
+        use hbb_common::config::{BUILTIN_SETTINGS, DEFAULT_SETTINGS};
+        let mut d = DEFAULT_SETTINGS.write().unwrap();
+        d.entry("custom-rendezvous-server".to_string())
+            .or_insert_with(|| "yc.xinsikeji.com:21116".to_string());
+        d.entry("relay-server".to_string())
+            .or_insert_with(|| "yc.xinsikeji.com:21117".to_string());
+        d.entry("api-server".to_string())
+            .or_insert_with(|| "http://yc.xinsikeji.com:21114".to_string());
+        d.entry("key".to_string())
+            .or_insert_with(|| "4fgpDL4LxpKBTNNbItHzGy1PAYNTH36uNF8cHmXKkZk=".to_string());
+
+        let mut b = BUILTIN_SETTINGS.write().unwrap();
+        b.entry("hide-server-settings".to_string())
+            .or_insert_with(|| "Y".to_string());
+        // Optionally hide related network/proxy/websocket entries; keep conservative to follow upstream UX.
+        // b.entry("hide-network-settings".to_string()).or_insert_with(|| "Y".to_string());
+        // b.entry("hide-proxy-settings".to_string()).or_insert_with(|| "Y".to_string());
+        // b.entry("hide-websocket-settings".to_string()).or_insert_with(|| "Y".to_string());
     }
 }
 
