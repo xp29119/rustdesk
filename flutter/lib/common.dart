@@ -2704,6 +2704,7 @@ Future<void> showLoginRequiredDialog(BuildContext context) async {
     return CustomAlertDialog(
       title: Text(translate('login_required_dialog_title2')),
       content: Text(translate('login_required_dialog_body2')),
+      contentBoxConstraints: BoxConstraints(minWidth: 500),
       actions: [
         dialogButton(translate('Cancel'), onPressed: close, isOutline: true),
         dialogButton(translate('go_to_login'), onPressed: onGoLogin),
