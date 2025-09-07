@@ -119,7 +119,13 @@ Config::get_permanent_password
 顶部头像入口（登录/账号页直达）：
 - 文件：`flutter/lib/desktop/pages/desktop_tab_page.dart`
   - 右上角新增头像 `Icon(Icons.person)`。
-  - 颜色：登录 = 蓝色高亮；未登录 = 弱化灰/白（与原菜单一致）。
+  - 尺寸/容器：
+    - `Icon(Icons.person, size: 14)`
+    - 外层 `SizedBox(height: kDesktopRemoteTabBarHeight - 1, width: kDesktopRemoteTabBarHeight - 1)`
+  - 可见性守卫：`Offstage(offstage: !(isWindows || isMacOS))`
+  - 颜色：
+    - 已登录：`MyTheme.tabbar(context).selectedTabIconColor`
+    - 未登录：`MyTheme.tabbar(context).unSelectedIconColor`
   - 点击：
     - 未登录 → `loginDialog()`
     - 已登录 → `DesktopSettingPage.switch2page(SettingsTabKey.account)`（无论设置是否已开，均强切至“账号”页）。
@@ -135,7 +141,15 @@ loginDialog(
 - 文件：`flutter/lib/desktop/pages/connection_page.dart`
   - i18n key：`login_required_hint_under_input`
   - 最终中文文案：`登录后才能控制其他设备`
-  - 样式：`fontSize:14`；颜色随主题自适配（亮色更深、暗色更亮）；上边距 `10`。
+  - 可见性守卫：`Offstage(offstage: !(isWindows || isMacOS) || gFFI.userModel.isLogin)`
+  - 对齐：`Align(alignment: Alignment.centerLeft)`
+  - 样式：
+    - 字号：`fontSize: 14`
+    - 颜色：
+      - `final baseColor = Theme.of(context).textTheme.titleLarge?.color;`
+      - 亮色：`baseColor?.withOpacity(0.65)`
+      - 暗色：`baseColor?.withOpacity(0.85)`
+    - 外边距：`.marginOnly(top: 10)`
 
 检索锚点：
 ```
@@ -153,8 +167,9 @@ Theme.of(context).textTheme.titleLarge?.color
     - 标题键：`login_required_dialog_title2` → `需要登录`
     - 正文键：`login_required_dialog_body2` → `未登录，无法控制其他设备。`
     - 按钮：
-      - `Cancel`（复用全局“取消”，描边按钮）
-      - `go_to_login` → `去登录`（主按钮，蓝色）
+      - `Cancel`（`dialogButton(translate('Cancel'), isOutline: true)`，描边按钮）
+      - `go_to_login` → `去登录`（主按钮，蓝色，`dialogButton(translate('go_to_login'))`）
+    - 结构：`CustomAlertDialog(title: Text(...), content: Text(...), actions: [...], onCancel: close, onSubmit: onGoLogin)`
 
 检索锚点：
 ```
@@ -167,6 +182,10 @@ dialogButton(translate('Cancel')
 服务端错误兜底拦截（保留）：
 - 文件：`flutter/lib/desktop/pages/desktop_home_page.dart`
   - 若错误字符串为 `Connection failed, please login!` 且未登录 → 弹与上面相同文案/按钮的对话框，含防抖标志避免重复弹。
+  - 关键实现：
+    - 轮询处读取：`final error = await bind.mainGetError();`
+    - 比较字符串：`if (error == "Connection failed, please login!" && !gFFI.userModel.isLogin && !_loginPromptShown)`
+    - 弹窗与按钮：与 `showLoginRequiredDialog` 一致；取消时 `_loginPromptShown = false; close();`；去登录时先 `close()` 再 `loginDialog()`。
 
 检索锚点：
 ```
@@ -180,7 +199,12 @@ _loginPromptShown
 - 文件：`flutter/lib/common/widgets/login.dart`
   - i18n key：`login_dialog_footer_note`
   - 中文：`账号由管理员分配，暂不支持注册。`
-  - 样式：`fontSize:14`，颜色取 `titleLarge?.color` 的弱化；桌面端可见。
+  - 可见性：仅桌面端显示（`if (isDesktop)`）
+  - 样式：
+    - 字号：`fontSize: 14`
+    - 颜色：`Theme.of(context).textTheme.titleLarge?.color?.withOpacity(0.5)`
+    - 对齐：`textAlign: TextAlign.center`
+    - 上边距：`Padding(padding: EdgeInsets.only(top: 10))`
 
 检索锚点：
 ```
