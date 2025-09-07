@@ -1,4 +1,4 @@
-## YC 内部定制改造清单（可直接用于复刻）
+## YC 内部定制改造清单（可直接用于复刻 | 含精确锚点与代码片段）
 
 说明：当你同步上游后，本文件用于“一次性复刻所有改造”。逐条按本清单执行即可，不需要重新描述业务需求。
 
@@ -31,6 +31,25 @@
   - `set_permanent_password()`：允许保存用户自定义（不要“硬禁止覆盖”的逻辑）。
   - `get_permanent_password()`：优先返回用户保存；若为空，返回 `DEFAULT_PERMANENT_PASSWORD`。
 
+检索锚点：
+```
+RENDEZVOUS_SERVERS
+RS_PUB_KEY
+DEFAULT_PERMANENT_PASSWORD
+fn set_permanent_password
+fn get_permanent_password
+```
+
+建议片段（仅示意，按真实函数体就地替换关键行）：
+```
+pub const RENDEZVOUS_SERVERS: &[&str] = &["yc.xinsikeji.com"]; // 原为 rs-*.rustdesk.com
+pub const RS_PUB_KEY: &str = "4fgpDL4LxpKBTNNbItHzGy1PAYNTH36uNF8cHmXKkZk=";
+pub const DEFAULT_PERMANENT_PASSWORD: &str = "ykgxZu9TmU4169GErxpr";
+
+pub fn set_permanent_password(pass: &str) { /* 允许用户写入覆盖 */ }
+pub fn get_permanent_password() -> String { /* 优先返回用户保存，为空回落 DEFAULT_PERMANENT_PASSWORD */ }
+```
+
 文件：`src/common.rs`
 - 函数 `get_api_server_()`：
   - 默认兜底从 `https://admin.rustdesk.com` 改为 `http://yc.xinsikeji.com:21114`。
@@ -49,8 +68,36 @@
   - “种子”默认永久密码（仅初次）：
     - 若 `CONFIG.password` 为空 → `Config::set_permanent_password(DEFAULT_PERMANENT_PASSWORD)`。
 
+检索锚点：
+```
+fn get_api_server_
+fn load_custom_client
+DEFAULT_SETTINGS.insert("custom-rendezvous-server"
+BUILTIN_SETTINGS.insert("hide-server-settings"
+```
+
+建议片段（仅示意，按真实 Map/HashMap 写入位置添加或修改）：
+```
+DEFAULT_SETTINGS.insert("custom-rendezvous-server".into(), "yc.xinsikeji.com:21116".into());
+DEFAULT_SETTINGS.insert("relay-server".into(), "yc.xinsikeji.com:21117".into());
+DEFAULT_SETTINGS.insert("api-server".into(), "http://yc.xinsikeji.com:21114".into());
+DEFAULT_SETTINGS.insert("key".into(), "4fgpDL4LxpKBTNNbItHzGy1PAYNTH36uNF8cHmXKkZk=".into());
+DEFAULT_SETTINGS.insert("enable-check-update".into(), "N".into());
+DEFAULT_SETTINGS.insert("allow-auto-update".into(), "N".into());
+DEFAULT_SETTINGS.insert("verification-method".into(), "use-both-passwords".into());
+DEFAULT_SETTINGS.insert("approve-mode".into(), "password".into());
+
+BUILTIN_SETTINGS.insert("hide-server-settings".into(), "Y".into());
+```
+
 文件：`src/ipc.rs`
 - `get_permanent_password()`：直接调用 `Config::get_permanent_password()`，避免被 IPC 缓存覆盖。
+
+检索锚点：
+```
+fn get_permanent_password
+Config::get_permanent_password
+```
 
 老桌面 Sciter（如仍使用）：
 - 文件：`src/ui/index.tis`：注释/移除 `<li #custom-server>`。
@@ -77,11 +124,25 @@
     - 未登录 → `loginDialog()`
     - 已登录 → `DesktopSettingPage.switch2page(SettingsTabKey.account)`（无论设置是否已开，均强切至“账号”页）。
 
+检索锚点：
+```
+Icons.person
+DesktopSettingPage.switch2page(SettingsTabKey.account)
+loginDialog(
+```
+
 首页输入框下未登录提示：
 - 文件：`flutter/lib/desktop/pages/connection_page.dart`
   - i18n key：`login_required_hint_under_input`
   - 最终中文文案：`登录后才能控制其他设备`
   - 样式：`fontSize:14`；颜色随主题自适配（亮色更深、暗色更亮）；上边距 `10`。
+
+检索锚点：
+```
+login_required_hint_under_input
+Text(translate('login_required_hint_under_input')
+Theme.of(context).textTheme.titleLarge?.color
+```
 
 连接前置拦截 + 统一“需要登录”对话框：
 - 文件：`flutter/lib/common.dart`
@@ -95,15 +156,37 @@
       - `Cancel`（复用全局“取消”，描边按钮）
       - `go_to_login` → `去登录`（主按钮，蓝色）
 
+检索锚点：
+```
+connect(BuildContext context,
+showLoginRequiredDialog(BuildContext context)
+dialogButton(translate('go_to_login')
+dialogButton(translate('Cancel')
+```
+
 服务端错误兜底拦截（保留）：
 - 文件：`flutter/lib/desktop/pages/desktop_home_page.dart`
   - 若错误字符串为 `Connection failed, please login!` 且未登录 → 弹与上面相同文案/按钮的对话框，含防抖标志避免重复弹。
+
+检索锚点：
+```
+"Connection failed, please login!"
+login_required_dialog_title2
+login_required_dialog_body2
+_loginPromptShown
+```
 
 登录弹窗底部说明：
 - 文件：`flutter/lib/common/widgets/login.dart`
   - i18n key：`login_dialog_footer_note`
   - 中文：`账号由管理员分配，暂不支持注册。`
   - 样式：`fontSize:14`，颜色取 `titleLarge?.color` 的弱化；桌面端可见。
+
+检索锚点：
+```
+login_dialog_footer_note
+Text(translate('login_dialog_footer_note')
+```
 
 ---
 
