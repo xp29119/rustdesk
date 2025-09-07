@@ -198,6 +198,12 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("selinux_tip", "SELinux is enabled on your device, which may prevent RustDesk from running properly as controlled side."),
         ("id_input_tip", "You can input an ID, a direct IP, or a domain with a port (<domain>:<port>).\nIf you want to access a device on another server, please append the server address (<id>@<server_address>?key=<key_value>), for example,\n9123456234@192.168.16.1:21117?key=5Qbwsde3unUcJBtrx9ZkvUmwFNoExHzpryHuPUdqlWM=.\nIf you want to access a device on a public server, please input \"<id>@public\", the key is not needed for public server.\n\nIf you want to force the use of a relay connection on the first connection, add \"/r\" at the end of the ID, for example, \"9123456234/r\"."),
         ("privacy_mode_impl_mag_tip", "Mode 1"),
+        // Added for desktop login UX optimization
+        ("login_required_hint_under_input", "Login required to start remote control"),
+        ("login_required_dialog_title", "Connection failed"),
+        ("login_required_dialog_body", "You must log in to control remote devices. Please log in and try again."),
+        ("go_to_login", "Go to login"),
+        ("login_dialog_footer_note", "Account is assigned by administrator; registration is not supported."),
         ("privacy_mode_impl_virtual_display_tip", "Mode 2"),
         ("idd_not_support_under_win10_2004_tip", "Indirect display driver is not supported. Windows 10, version 2004 or newer is required."),
         ("input_source_1_tip", "Input source 1"),

@@ -218,6 +218,12 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Verification code", "验证码"),
         ("verification_tip", "已向注册邮箱发送了登录验证码，请输入验证码继续登录"),
         ("Logout", "登出"),
+        // 新增：桌面端登录提示与对话框
+        ("login_required_hint_under_input", "需登录后才能发起远程控制"),
+        ("login_required_dialog_title", "连接失败"),
+        ("login_required_dialog_body", "未登录状态无法控制远程设备，请先登录后再试。"),
+        ("go_to_login", "去登录"),
+        ("login_dialog_footer_note", "账号由管理员分配，暂不支持注册。"),
         ("Tags", "标签"),
         ("Search ID", "查找 ID"),
         ("whitelist_sep", "可以使用逗号，分号，空格或者换行符作为分隔符"),

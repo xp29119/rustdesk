@@ -13,6 +13,8 @@ import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
 import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
+import 'package:flutter_hbb/common/widgets/login.dart';
+import 'package:flutter_hbb/common/widgets/dialog.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
@@ -49,6 +51,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   var watchIsCanRecordAudio = false;
   Timer? _updateTimer;
   bool isCardClosed = false;
+  bool _loginPromptShown = false;
 
   final RxBool _editHover = false.obs;
   final RxBool _block = false.obs;
@@ -696,8 +699,36 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       await gFFI.serverModel.fetchID();
       final error = await bind.mainGetError();
       if (systemError != error) {
-        systemError = error;
-        setState(() {});
+        if (error == "Connection failed, please login!" &&
+            (isWindows || isMacOS) &&
+            !gFFI.userModel.isLogin &&
+            !_loginPromptShown) {
+          _loginPromptShown = true;
+          systemError = ""; // avoid showing fallback card for this case
+          setState(() {});
+          gFFI.dialogManager.show((setState, close, context) {
+            onGoLogin() {
+              close();
+              _loginPromptShown = false;
+              loginDialog();
+            }
+            return CustomAlertDialog(
+              title: Text(translate('login_required_dialog_title')),
+              content: Text(translate('login_required_dialog_body')),
+              actions: [
+                dialogButton(translate('go_to_login'), onPressed: onGoLogin),
+              ],
+              onCancel: () {
+                _loginPromptShown = false;
+                close();
+              },
+              onSubmit: onGoLogin,
+            );
+          });
+        } else {
+          systemError = error;
+          setState(() {});
+        }
       }
       final v = await mainGetBoolOption(kOptionStopService);
       if (v != svcStopped.value) {

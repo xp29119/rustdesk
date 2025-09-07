@@ -8,6 +8,7 @@ import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
 import 'package:window_manager/window_manager.dart';
+import '../../common/widgets/login.dart';
 // import 'package:flutter/services.dart';
 
 import '../../common/shared_state.dart';
@@ -96,15 +97,38 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
             backgroundColor: Theme.of(context).colorScheme.background,
             body: DesktopTab(
               controller: tabController,
-              tail: Offstage(
-                offstage: bind.isIncomingOnly() || bind.isDisableSettings(),
-                child: ActionIcon(
-                  message: 'Settings',
-                  icon: IconFont.menu,
-                  onTap: DesktopTabPage.onAddSetting,
-                  isClose: false,
+              // Tail area on the right side of the tab bar
+              tail: Row(children: [
+                // Avatar icon for login entry (Windows/macOS only)
+                Offstage(
+                  offstage: !(isWindows || isMacOS),
+                  child: Obx(() {
+                    final isLoggedIn = gFFI.userModel.isLogin;
+                    final color = isLoggedIn
+                        ? MyTheme.tabbar(context).selectedTabIconColor
+                        : MyTheme.tabbar(context).unSelectedIconColor;
+                    return InkWell(
+                      onTap: () => loginDialog(),
+                      child: SizedBox(
+                        height: kDesktopRemoteTabBarHeight - 1,
+                        width: kDesktopRemoteTabBarHeight - 1,
+                        child: Icon(Icons.person, size: 14, color: color),
+                      ),
+                    );
+                  }),
                 ),
-              ),
+                const SizedBox(width: 6),
+                // Keep original menu button with existing visibility gate
+                Offstage(
+                  offstage: bind.isIncomingOnly() || bind.isDisableSettings(),
+                  child: ActionIcon(
+                    message: 'Settings',
+                    icon: IconFont.menu,
+                    onTap: DesktopTabPage.onAddSetting,
+                    isClose: false,
+                  ),
+                ),
+              ]),
             )));
     return isMacOS || kUseCompatibleUiMode
         ? tabWidget

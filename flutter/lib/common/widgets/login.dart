@@ -598,6 +598,19 @@ Future<bool?> loginDialog() async {
             userFocusNode: userFocusNode,
           ),
           thirdAuthWidget(),
+          // footer note (desktop only)
+          if (isDesktop)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(
+                translate('login_dialog_footer_note'),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+            ),
         ],
       ),
       onCancel: onDialogCancel,
