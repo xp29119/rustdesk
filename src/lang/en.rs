@@ -202,6 +202,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("login_required_hint_under_input", "Login required to start remote control"),
         ("login_required_dialog_title", "Connection failed"),
         ("login_required_dialog_body", "You must log in to control remote devices. Please log in and try again."),
+        ("login_required_dialog_title2", "Login required"),
+        ("login_required_dialog_body2", "Not logged in, unable to initiate remote control."),
         ("go_to_login", "Go to login"),
         ("login_dialog_footer_note", "Account is assigned by administrator; registration is not supported."),
         ("privacy_mode_impl_virtual_display_tip", "Mode 2"),

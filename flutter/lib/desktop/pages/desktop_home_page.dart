@@ -713,9 +713,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               loginDialog();
             }
             return CustomAlertDialog(
-              title: Text(translate('login_required_dialog_title')),
-              content: Text(translate('login_required_dialog_body')),
+              title: Text(translate('login_required_dialog_title2')),
+              content: Text(translate('login_required_dialog_body2')),
               actions: [
+                dialogButton(translate('Cancel'), onPressed: () { _loginPromptShown = false; close(); }, isOutline: true),
                 dialogButton(translate('go_to_login'), onPressed: onGoLogin),
               ],
               onCancel: () {

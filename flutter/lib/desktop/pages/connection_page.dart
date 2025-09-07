@@ -512,16 +512,18 @@ class _ConnectionPageState extends State<ConnectionPage>
               ],
             ),
             Obx(() {
-              final textColor = Theme.of(context).textTheme.titleLarge?.color;
+              final theme = Theme.of(context);
+              final baseColor = theme.textTheme.titleLarge?.color;
+              final isDark = theme.brightness == Brightness.dark;
+              final hintColor = baseColor?.withOpacity(isDark ? 0.85 : 0.65);
               return Offstage(
                 offstage: !(isWindows || isMacOS) || gFFI.userModel.isLogin,
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     translate('login_required_hint_under_input'),
-                    style: TextStyle(
-                        fontSize: 14, color: textColor?.withOpacity(0.5)),
-                  ).marginOnly(top: 6),
+                    style: TextStyle(fontSize: 14, color: hintColor),
+                  ).marginOnly(top: 10),
                 ),
               );
             }),

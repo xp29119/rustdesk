@@ -222,6 +222,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("login_required_hint_under_input", "需登录后才能发起远程控制"),
         ("login_required_dialog_title", "连接失败"),
         ("login_required_dialog_body", "未登录状态无法控制远程设备，请先登录后再试。"),
+        ("login_required_dialog_title2", "需要登录"),
+        ("login_required_dialog_body2", "未登录，无法发起远程控制"),
         ("go_to_login", "去登录"),
         ("login_dialog_footer_note", "账号由管理员分配，暂不支持注册。"),
         ("Tags", "标签"),

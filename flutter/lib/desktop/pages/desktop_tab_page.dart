@@ -110,8 +110,8 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
                     return InkWell(
                       onTap: () {
                         if (gFFI.userModel.isLogin) {
-                          // Jump to Settings - Account tab
-                          DesktopTabPage.onAddSetting(initialPage: SettingsTabKey.account);
+                          // Always switch to Settings - Account
+                          DesktopSettingPage.switch2page(SettingsTabKey.account);
                         } else {
                           loginDialog();
                         }
