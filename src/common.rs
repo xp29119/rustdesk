@@ -1573,6 +1573,11 @@ pub fn load_custom_client() {
             .or_insert_with(|| "http://yc.xinsikeji.com:21114".to_string());
         d.entry("key".to_string())
             .or_insert_with(|| "4fgpDL4LxpKBTNNbItHzGy1PAYNTH36uNF8cHmXKkZk=".to_string());
+        // Disable automatic update check and auto-update by default for custom build
+        d.entry("enable-check-update".to_string())
+            .or_insert_with(|| "N".to_string());
+        d.entry("allow-auto-update".to_string())
+            .or_insert_with(|| "N".to_string());
 
         let mut b = BUILTIN_SETTINGS.write().unwrap();
         b.entry("hide-server-settings".to_string())
