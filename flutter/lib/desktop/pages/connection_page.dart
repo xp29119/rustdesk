@@ -513,9 +513,8 @@ class _ConnectionPageState extends State<ConnectionPage>
             ),
             Obx(() {
               final theme = Theme.of(context);
-              final baseColor = theme.textTheme.titleLarge?.color;
               final isDark = theme.brightness == Brightness.dark;
-              final hintColor = baseColor?.withOpacity(isDark ? 0.85 : 0.65);
+              final hintColor = isDark ? const Color(0xFFE0E0E0) : const Color(0xFF606060);
               return Offstage(
                 offstage: !(isWindows || isMacOS) || gFFI.userModel.isLogin,
                 child: Align(
