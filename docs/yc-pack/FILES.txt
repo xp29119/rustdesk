@@ -1,0 +1,15 @@
+/Users/huangfubin/rustdesk/docs/YcCustomBuild.md
+/Users/huangfubin/rustdesk/libs/hbb_common/src/config.rs
+/Users/huangfubin/rustdesk/src/common.rs
+/Users/huangfubin/rustdesk/src/ipc.rs
+/Users/huangfubin/rustdesk/src/lang/cn.rs
+/Users/huangfubin/rustdesk/src/lang/en.rs
+/Users/huangfubin/rustdesk/src/ui/index.tis
+/Users/huangfubin/rustdesk/flutter/lib/common.dart
+/Users/huangfubin/rustdesk/flutter/lib/desktop/pages/desktop_tab_page.dart
+/Users/huangfubin/rustdesk/flutter/lib/desktop/pages/connection_page.dart
+/Users/huangfubin/rustdesk/flutter/lib/desktop/pages/desktop_home_page.dart
+/Users/huangfubin/rustdesk/flutter/lib/common/widgets/login.dart
+/Users/huangfubin/rustdesk/flutter/lib/mobile/pages/settings_page.dart
+/Users/huangfubin/rustdesk/flutter/lib/common/widgets/setting_widgets.dart
+
