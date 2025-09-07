@@ -1048,12 +1048,8 @@ impl Config {
     }
 
     pub fn set_permanent_password(password: &str) {
-        if HARD_SETTINGS
-            .read()
-            .unwrap()
-            .get("password")
-            .map_or(false, |v| v == password)
-        {
+        // If a hardcoded password is present, do not allow overriding.
+        if HARD_SETTINGS.read().unwrap().get("password").is_some() {
             return;
         }
         let mut config = CONFIG.write().unwrap();
@@ -1066,13 +1062,12 @@ impl Config {
     }
 
     pub fn get_permanent_password() -> String {
-        let mut password = CONFIG.read().unwrap().password.clone();
-        if password.is_empty() {
-            if let Some(v) = HARD_SETTINGS.read().unwrap().get("password") {
-                password = v.to_owned();
-            }
+        // Highest priority: hardcoded password if present.
+        if let Some(v) = HARD_SETTINGS.read().unwrap().get("password") {
+            return v.to_owned();
         }
-        password
+        // Otherwise fall back to stored config.
+        CONFIG.read().unwrap().password.clone()
     }
 
     pub fn set_salt(salt: &str) {

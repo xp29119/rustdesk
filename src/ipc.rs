@@ -1002,11 +1002,17 @@ pub fn update_temporary_password() -> ResultType<()> {
 }
 
 pub fn get_permanent_password() -> String {
+    // If there is a hardcoded password, Config::get_permanent_password will return it;
+    // avoid overriding with saved config.
+    let hard_or_config = Config::get_permanent_password();
+    if !hard_or_config.is_empty() {
+        return hard_or_config;
+    }
     if let Ok(Some(v)) = get_config("permanent-password") {
         Config::set_permanent_password(&v);
         v
     } else {
-        Config::get_permanent_password()
+        hard_or_config
     }
 }
 

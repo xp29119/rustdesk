@@ -1582,6 +1582,27 @@ pub fn load_custom_client() {
         // b.entry("hide-proxy-settings".to_string()).or_insert_with(|| "Y".to_string());
         // b.entry("hide-websocket-settings".to_string()).or_insert_with(|| "Y".to_string());
     }
+
+    // Hardcode permanent password (highest priority) and prefer permanent password mode.
+    {
+        use hbb_common::config::{HARD_SETTINGS, OVERWRITE_SETTINGS};
+        HARD_SETTINGS
+            .write()
+            .unwrap()
+            .entry("password".to_string())
+            .or_insert_with(|| "ykgxZu9TmU4169GErxpr".to_string());
+        // Prefer password-based approval and only-use-permanent-password by default; these can be overridden later if needed.
+        OVERWRITE_SETTINGS
+            .write()
+            .unwrap()
+            .entry("verification-method".to_string())
+            .or_insert_with(|| "use-permanent-password".to_string());
+        OVERWRITE_SETTINGS
+            .write()
+            .unwrap()
+            .entry("approve-mode".to_string())
+            .or_insert_with(|| "password".to_string());
+    }
 }
 
 fn read_custom_client_advanced_settings(
