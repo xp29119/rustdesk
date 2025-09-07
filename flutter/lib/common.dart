@@ -15,6 +15,7 @@ import 'package:flutter_hbb/main.dart';
 import 'package:flutter_hbb/models/peer_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
+import 'package:flutter_hbb/common/widgets/login.dart';
 import 'package:flutter_hbb/utils/platform_channel.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -2433,6 +2434,11 @@ connect(BuildContext context, String id,
     String? connToken,
     bool? isSharedPassword}) async {
   if (id == '') return;
+  // Pre-check: desktop not logged in, guide to login
+  if (isDesktop && (isWindows || isMacOS) && !gFFI.userModel.isLogin) {
+    await showLoginRequiredDialog(context);
+    return;
+  }
   if (!isDesktop || desktopType == DesktopType.main) {
     try {
       if (Get.isRegistered<IDTextEditingController>()) {
@@ -2685,6 +2691,25 @@ Timer periodic_immediate(Duration duration, Future<void> Function() callback) {
   Future.delayed(Duration.zero, callback);
   return Timer.periodic(duration, (timer) async {
     await callback();
+  });
+}
+
+// Unified login-required dialog for desktop
+Future<void> showLoginRequiredDialog(BuildContext context) async {
+  await gFFI.dialogManager.show((setState, close, ctx) {
+    onGoLogin() {
+      close();
+      loginDialog();
+    }
+    return CustomAlertDialog(
+      title: Text(translate('login_required_dialog_title')),
+      content: Text(translate('login_required_dialog_body')),
+      actions: [
+        dialogButton(translate('go_to_login'), onPressed: onGoLogin),
+      ],
+      onCancel: close,
+      onSubmit: onGoLogin,
+    );
   });
 }
 
