@@ -108,7 +108,14 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
                         ? MyTheme.tabbar(context).selectedTabIconColor
                         : MyTheme.tabbar(context).unSelectedIconColor;
                     return InkWell(
-                      onTap: () => loginDialog(),
+                      onTap: () {
+                        if (gFFI.userModel.isLogin) {
+                          // Jump to Settings - Account tab
+                          DesktopTabPage.onAddSetting(initialPage: SettingsTabKey.account);
+                        } else {
+                          loginDialog();
+                        }
+                      },
                       child: SizedBox(
                         height: kDesktopRemoteTabBarHeight - 1,
                         width: kDesktopRemoteTabBarHeight - 1,

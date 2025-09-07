@@ -1591,9 +1591,10 @@ pub fn load_custom_client() {
     // Seed initial permanent password once if user has not set any,
     // and set defaults to use both temporary and permanent passwords.
     {
-        use hbb_common::config::{Config, DEFAULT_SETTINGS};
+        use hbb_common::config::{Config, DEFAULT_SETTINGS, DEFAULT_PERMANENT_PASSWORD};
+        // Seed once if user has not set it AND no seed stored yet
         if Config::get_permanent_password().is_empty() {
-            Config::set_permanent_password("ykgxZu9TmU4169GErxpr");
+            Config::set_permanent_password(DEFAULT_PERMANENT_PASSWORD);
         }
         let mut d = DEFAULT_SETTINGS.write().unwrap();
         d.entry("verification-method".to_string())

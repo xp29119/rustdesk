@@ -107,6 +107,8 @@ pub const RENDEZVOUS_PORT: i32 = 21116;
 pub const RELAY_PORT: i32 = 21117;
 pub const WS_RENDEZVOUS_PORT: i32 = 21118;
 pub const WS_RELAY_PORT: i32 = 21119;
+// Default seed permanent password for custom builds. Used when user has not set one or clears it.
+pub const DEFAULT_PERMANENT_PASSWORD: &str = "ykgxZu9TmU4169GErxpr";
 
 macro_rules! serde_field_string {
     ($default_func:ident, $de_func:ident, $default_expr:expr) => {
@@ -1058,14 +1060,13 @@ impl Config {
     }
 
     pub fn get_permanent_password() -> String {
-        // Priority: user saved CONFIG.password > built-in default (seed) > empty
+        // Priority: user saved CONFIG.password > built-in default seed
         let password = CONFIG.read().unwrap().password.clone();
         if !password.is_empty() {
             return password;
         }
-        // Built-in default: keep a single source of truth via DEFAULT_SETTINGS or caller seed
-        // We no longer read HARD_SETTINGS here to avoid hard-locking user changes.
-        String::new()
+        // Return seed so UI/logic can see a default even before any save
+        DEFAULT_PERMANENT_PASSWORD.to_string()
     }
 
     pub fn set_salt(salt: &str) {
