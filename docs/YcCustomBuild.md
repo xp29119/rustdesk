@@ -270,4 +270,242 @@ Text(translate('login_dialog_footer_note')
 
 附注：如需把某些值（例如 API）通过编译期环境变量覆盖，仍可使用 `API_SERVER=... cargo build` 方式，上述默认仅作为兜底，不影响上游优先级链与行为一致性。
 
+---
+
+## 9) 上下文扩展片段（可直接比对/粘贴）
+
+以下为关键文件的“就地上下文片段”，建议先用下述“检索锚点”在代码中定位，再对照片段核对或粘贴关键行。
+
+### 9.1 libs/hbb_common/src/config.rs
+
+常量区域（建议放在同源常量区）：
+```rust
+pub const RENDEZVOUS_SERVERS: &[&str] = &["yc.xinsikeji.com"]; // 原可能为 rs-*.rustdesk.com
+pub const RS_PUB_KEY: &str = "4fgpDL4LxpKBTNNbItHzGy1PAYNTH36uNF8cHmXKkZk=";
+pub const DEFAULT_PERMANENT_PASSWORD: &str = "ykgxZu9TmU4169GErxpr";
+```
+
+永久密码逻辑（伪示例，保留你项目中的实际结构，仅确保“可被用户覆盖、为空回落默认”）：
+```rust
+pub fn set_permanent_password(pass: &str) {
+    // 允许保存用户自定义密码；不要早退阻止覆盖
+    CONFIG.password = pass.to_string();
+}
+
+pub fn get_permanent_password() -> String {
+    let saved = CONFIG.password.trim();
+    if saved.is_empty() {
+        DEFAULT_PERMANENT_PASSWORD.to_string()
+    } else {
+        saved.to_string()
+    }
+}
+```
+
+### 9.2 src/common.rs
+
+API 默认兜底：
+```rust
+fn get_api_server_() -> String {
+    // ... 省略高优先级判断（用户设置/编译期等）
+    // 最末尾兜底：
+    "http://yc.xinsikeji.com:21114".to_string()
+}
+```
+
+启动注入默认项（片段）：
+```rust
+fn load_custom_client() {
+    // ...
+    DEFAULT_SETTINGS.insert("custom-rendezvous-server".into(), "yc.xinsikeji.com:21116".into());
+    DEFAULT_SETTINGS.insert("relay-server".into(), "yc.xinsikeji.com:21117".into());
+    DEFAULT_SETTINGS.insert("api-server".into(), "http://yc.xinsikeji.com:21114".into());
+    DEFAULT_SETTINGS.insert("key".into(), "4fgpDL4LxpKBTNNbItHzGy1PAYNTH36uNF8cHmXKkZk=".into());
+    DEFAULT_SETTINGS.insert("enable-check-update".into(), "N".into());
+    DEFAULT_SETTINGS.insert("allow-auto-update".into(), "N".into());
+    DEFAULT_SETTINGS.insert("verification-method".into(), "use-both-passwords".into());
+    DEFAULT_SETTINGS.insert("approve-mode".into(), "password".into());
+
+    BUILTIN_SETTINGS.insert("hide-server-settings".into(), "Y".into());
+
+    if CONFIG.password.trim().is_empty() {
+        Config::set_permanent_password(DEFAULT_PERMANENT_PASSWORD);
+    }
+    // ...
+}
+```
+
+### 9.3 src/ipc.rs
+
+永久密码 IPC 获取：
+```rust
+pub fn get_permanent_password(/* ... */) -> String {
+    Config::get_permanent_password()
+}
+```
+
+### 9.4 src/lang/cn.rs（中文）
+
+```rust
+("login_required_hint_under_input", "登录后才能控制其他设备"),
+("login_required_dialog_title2", "需要登录"),
+("login_required_dialog_body2", "未登录，无法控制其他设备。"),
+("go_to_login", "去登录"),
+("login_dialog_footer_note", "账号由管理员分配，暂不支持注册。"),
+```
+
+### 9.5 src/lang/en.rs（英文）
+
+```rust
+("login_required_hint_under_input", "Login required to start remote control"),
+("login_required_dialog_title2", "Login required"),
+("login_required_dialog_body2", "Not logged in, unable to initiate remote control."),
+("go_to_login", "Go to login"),
+("login_dialog_footer_note", "Account assigned by administrator, registration is not supported."),
+```
+
+### 9.6 flutter/lib/desktop/pages/desktop_tab_page.dart（头像按钮）
+
+```dart
+// tail 区域内
+Offstage(
+  offstage: !(isWindows || isMacOS),
+  child: Obx(() {
+    final isLoggedIn = gFFI.userModel.isLogin;
+    final color = isLoggedIn
+        ? MyTheme.tabbar(context).selectedTabIconColor
+        : MyTheme.tabbar(context).unSelectedIconColor;
+    return InkWell(
+      onTap: () {
+        if (gFFI.userModel.isLogin) {
+          DesktopSettingPage.switch2page(SettingsTabKey.account);
+        } else {
+          loginDialog();
+        }
+      },
+      child: SizedBox(
+        height: kDesktopRemoteTabBarHeight - 1,
+        width: kDesktopRemoteTabBarHeight - 1,
+        child: Icon(Icons.person, size: 14, color: color),
+      ),
+    );
+  }),
+),
+```
+
+### 9.7 flutter/lib/desktop/pages/connection_page.dart（未登录提示）
+
+```dart
+Obx(() {
+  final theme = Theme.of(context);
+  final baseColor = theme.textTheme.titleLarge?.color;
+  final isDark = theme.brightness == Brightness.dark;
+  final hintColor = baseColor?.withOpacity(isDark ? 0.85 : 0.65);
+  return Offstage(
+    offstage: !(isWindows || isMacOS) || gFFI.userModel.isLogin,
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        translate('login_required_hint_under_input'),
+        style: TextStyle(fontSize: 14, color: hintColor),
+      ).marginOnly(top: 10),
+    ),
+  );
+}),
+```
+
+### 9.8 flutter/lib/common.dart（连接前置拦截 + 统一弹窗）
+
+connect 守卫：
+```dart
+if (isDesktop && (isWindows || isMacOS) && !gFFI.userModel.isLogin) {
+  await showLoginRequiredDialog(context);
+  return;
+}
+```
+
+统一弹窗：
+```dart
+Future<void> showLoginRequiredDialog(BuildContext context) async {
+  await gFFI.dialogManager.show((setState, close, ctx) {
+    onGoLogin() { close(); loginDialog(); }
+    return CustomAlertDialog(
+      title: Text(translate('login_required_dialog_title2')),
+      content: Text(translate('login_required_dialog_body2')),
+      actions: [
+        dialogButton(translate('Cancel'), onPressed: close, isOutline: true),
+        dialogButton(translate('go_to_login'), onPressed: onGoLogin),
+      ],
+      onCancel: close,
+      onSubmit: onGoLogin,
+    );
+  });
+}
+```
+
+### 9.9 flutter/lib/desktop/pages/desktop_home_page.dart（服务端错误兜底）
+
+```dart
+final error = await bind.mainGetError();
+if (systemError != error) {
+  if (error == "Connection failed, please login!" && (isWindows || isMacOS)
+      && !gFFI.userModel.isLogin && !_loginPromptShown) {
+    _loginPromptShown = true;
+    systemError = "";
+    setState(() {});
+    gFFI.dialogManager.show((setState, close, context) {
+      onGoLogin() { close(); _loginPromptShown = false; loginDialog(); }
+      return CustomAlertDialog(
+        title: Text(translate('login_required_dialog_title2')),
+        content: Text(translate('login_required_dialog_body2')),
+        actions: [
+          dialogButton(translate('Cancel'), onPressed: () { _loginPromptShown = false; close(); }, isOutline: true),
+          dialogButton(translate('go_to_login'), onPressed: onGoLogin),
+        ],
+        onCancel: () { _loginPromptShown = false; close(); },
+        onSubmit: onGoLogin,
+      );
+    });
+  } else {
+    systemError = error;
+    setState(() {});
+  }
+}
+```
+
+### 9.10 flutter/lib/common/widgets/login.dart（底部说明）
+
+```dart
+if (isDesktop)
+  Padding(
+    padding: const EdgeInsets.only(top: 10),
+    child: Builder(builder: (context) {
+      final textColor = Theme.of(context).textTheme.titleLarge?.color;
+      return Text(
+        translate('login_dialog_footer_note'),
+        style: TextStyle(fontSize: 14, color: textColor?.withOpacity(0.5)),
+        textAlign: TextAlign.center,
+      );
+    }),
+  ),
+```
+
+### 9.11 Flutter 移动端入口隐藏
+
+隐藏扫码：删除或注释相关 import 与按钮添加处（检索 `ScanButton` / `scan_page.dart`）。
+
+隐藏“导入/导出服务器配置”：
+```dart
+List<Widget> ServerConfigImportExportWidgets() {
+  return [];
+}
+```
+
+### 9.12 Sciter 旧桌面入口（如使用）
+
+```html
+<!-- 注释 “ID/Relay Server” 菜单项 -->
+<!-- <li #custom-server> ... </li> -->
+```
+
 
