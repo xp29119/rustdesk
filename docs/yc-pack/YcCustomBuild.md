@@ -151,7 +151,7 @@ Obx(() {
 }),
 ```
 
-7) 桌面逻辑：连接前置拦截 + 统一登录对话框（minWidth=420，并复用“允许远程修改配置”权限）
+7) 桌面逻辑：连接前置拦截 + 统一登录对话框（minWidth=420；不改变原有蒙层策略）
 - `flutter/lib/common.dart`
 ```dart
 // connect(...) 顶部
@@ -162,7 +162,7 @@ if (isDesktop && (isWindows || isMacOS) && !gFFI.userModel.isLogin) {
 
 Future<void> showLoginRequiredDialog(BuildContext context) async {
   await gFFI.dialogManager.show((setState, close, ctx) {
-    onGoLogin() async { if (await isRemoteConfigBlocked()) return; close(); loginDialog(); }
+    onGoLogin() { close(); loginDialog(); }
     return CustomAlertDialog(
       title: Text(translate('login_required_dialog_title2')),
       content: Text(translate('login_required_dialog_body2')),
@@ -178,7 +178,7 @@ Future<void> showLoginRequiredDialog(BuildContext context) async {
 }
 ```
 
-8) 桌面兜底：服务端错误字符串拦截（minWidth=420，并复用权限）
+8) 桌面兜底：服务端错误字符串拦截（minWidth=420；不改变原有蒙层策略）
 - `flutter/lib/desktop/pages/desktop_home_page.dart`
 ```dart
 final error = await bind.mainGetError();
@@ -186,7 +186,7 @@ if (error == "Connection failed, please login!" && (isWindows || isMacOS)
     && !gFFI.userModel.isLogin && !_loginPromptShown) {
   _loginPromptShown = true;
   gFFI.dialogManager.show((setState, close, context) {
-    onGoLogin() async { if (await isRemoteConfigBlocked()) { return; } close(); _loginPromptShown = false; loginDialog(); }
+    onGoLogin() { close(); _loginPromptShown = false; loginDialog(); }
     return CustomAlertDialog(
       title: Text(translate('login_required_dialog_title2')),
       content: Text(translate('login_required_dialog_body2')),

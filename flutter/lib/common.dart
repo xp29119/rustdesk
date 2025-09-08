@@ -2697,8 +2697,7 @@ Timer periodic_immediate(Duration duration, Future<void> Function() callback) {
 // Unified login-required dialog for desktop
 Future<void> showLoginRequiredDialog(BuildContext context) async {
   await gFFI.dialogManager.show((setState, close, ctx) {
-    onGoLogin() async {
-      if (await isRemoteConfigBlocked()) return;
+    onGoLogin() {
       close();
       loginDialog();
     }
@@ -2974,13 +2973,7 @@ Future<bool> canBeBlocked() async {
 
 // Whether UI actions that modify configuration should be blocked
 // according to current remote session policy.
-Future<bool> isRemoteConfigBlocked() async {
-  try {
-    return stateGlobal.videoConnCount > 0 && await canBeBlocked();
-  } catch (_) {
-    return await canBeBlocked();
-  }
-}
+// intentionally no extra guard here; keep original mask-layer behavior
 
 // to-do: web not implemented
 Future<void> shouldBeBlocked(RxBool block, WhetherUseRemoteBlock? use) async {

@@ -24,11 +24,11 @@ rg -n "Icons.person|DesktopSettingPage.switch2page\(SettingsTabKey.account\)|log
 echo "[6] Login hint under input"
 rg -n "login_required_hint_under_input|titleLarge\?\.color|withOpacity\(|marginOnly\(top: 10\)" flutter/lib/desktop/pages/connection_page.dart || true
 
-echo "[7] Pre-check login & dialog (width=420 + permission guard)"
-rg -n "connect\(BuildContext|showLoginRequiredDialog\(|contentBoxConstraints: BoxConstraints\(minWidth: 420\)|isRemoteConfigBlocked\(|dialogButton\(translate\('go_to_login'\)|dialogButton\(translate\('Cancel'\)" flutter/lib/common.dart || true
+echo "[7] Pre-check login & dialog (width=420)"
+rg -n "connect\(BuildContext|showLoginRequiredDialog\(|contentBoxConstraints: BoxConstraints\(minWidth: 420\)|dialogButton\(translate\('go_to_login'\)|dialogButton\(translate\('Cancel'\)" flutter/lib/common.dart || true
 
-echo "[8] Fallback server error dialog (width=420 + permission guard)"
-rg -n "Connection failed, please login!|login_required_dialog_title2|login_required_dialog_body2|contentBoxConstraints: BoxConstraints\(minWidth: 420\)|_loginPromptShown|isRemoteConfigBlocked\(" flutter/lib/desktop/pages/desktop_home_page.dart || true
+echo "[8] Fallback server error dialog (width=420)"
+rg -n "Connection failed, please login!|login_required_dialog_title2|login_required_dialog_body2|contentBoxConstraints: BoxConstraints\(minWidth: 420\)|_loginPromptShown" flutter/lib/desktop/pages/desktop_home_page.dart || true
 
 echo "[9] Login dialog footer note"
 rg -n "login_dialog_footer_note|withOpacity\(0.5\)|EdgeInsets.only\(top: 10\)" flutter/lib/common/widgets/login.dart || true

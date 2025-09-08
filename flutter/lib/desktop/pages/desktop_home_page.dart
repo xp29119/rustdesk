@@ -707,10 +707,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           systemError = ""; // avoid showing fallback card for this case
           setState(() {});
           gFFI.dialogManager.show((setState, close, context) {
-            onGoLogin() async {
-              if (await isRemoteConfigBlocked()) {
-                return;
-              }
+            onGoLogin() {
               close();
               _loginPromptShown = false;
               loginDialog();
