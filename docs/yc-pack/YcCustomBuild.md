@@ -131,14 +131,13 @@ Offstage(
 ),
 ```
 
-6) 桌面 UI：输入框下未登录提示
+6) 桌面 UI：输入框下未登录提示（颜色增强：亮#606060 / 暗#E0E0E0）
 - `flutter/lib/desktop/pages/connection_page.dart`
 ```dart
 Obx(() {
   final theme = Theme.of(context);
-  final baseColor = theme.textTheme.titleLarge?.color;
   final isDark = theme.brightness == Brightness.dark;
-  final hintColor = baseColor?.withOpacity(isDark ? 0.85 : 0.65);
+  final hintColor = isDark ? const Color(0xFFE0E0E0) : const Color(0xFF606060);
   return Offstage(
     offstage: !(isWindows || isMacOS) || gFFI.userModel.isLogin,
     child: Align(
@@ -167,6 +166,7 @@ Future<void> showLoginRequiredDialog(BuildContext context) async {
     return CustomAlertDialog(
       title: Text(translate('login_required_dialog_title2')),
       content: Text(translate('login_required_dialog_body2')),
+      contentBoxConstraints: BoxConstraints(minWidth: 500),
       actions: [
         dialogButton(translate('Cancel'), onPressed: close, isOutline: true),
         dialogButton(translate('go_to_login'), onPressed: onGoLogin),
@@ -190,6 +190,7 @@ if (error == "Connection failed, please login!" && (isWindows || isMacOS)
     return CustomAlertDialog(
       title: Text(translate('login_required_dialog_title2')),
       content: Text(translate('login_required_dialog_body2')),
+      contentBoxConstraints: BoxConstraints(minWidth: 500),
       actions: [
         dialogButton(translate('Cancel'), onPressed: () { _loginPromptShown = false; close(); }, isOutline: true),
         dialogButton(translate('go_to_login'), onPressed: onGoLogin),
@@ -237,9 +238,9 @@ rg -n "fn get_api_server_|fn load_custom_client|custom-rendezvous-server|relay-s
 rg -n "get_permanent_password\(|Config::get_permanent_password" src/ipc.rs
 rg -n "login_required_hint_under_input|login_required_dialog_title2|login_required_dialog_body2|go_to_login|login_dialog_footer_note" src/lang/cn.rs src/lang/en.rs
 rg -n "Icons.person|DesktopSettingPage.switch2page\(SettingsTabKey.account\)|loginDialog\(" flutter/lib/desktop/pages/desktop_tab_page.dart
-rg -n "login_required_hint_under_input|titleLarge\?\.color|withOpacity\(|marginOnly\(top: 10\)" flutter/lib/desktop/pages/connection_page.dart
-rg -n "connect\(BuildContext|showLoginRequiredDialog\(|dialogButton\(translate\('go_to_login'\)|dialogButton\(translate\('Cancel'\)" flutter/lib/common.dart
-rg -n "Connection failed, please login!|login_required_dialog_title2|login_required_dialog_body2|_loginPromptShown" flutter/lib/desktop/pages/desktop_home_page.dart
+rg -n "login_required_hint_under_input|0xFF606060|0xFFE0E0E0|marginOnly\(top: 10\)" flutter/lib/desktop/pages/connection_page.dart
+rg -n "connect\(BuildContext|showLoginRequiredDialog\(|contentBoxConstraints: BoxConstraints\(minWidth: 500\)|dialogButton\(translate\('go_to_login'\)|dialogButton\(translate\('Cancel'\)" flutter/lib/common.dart
+rg -n "Connection failed, please login!|login_required_dialog_title2|login_required_dialog_body2|contentBoxConstraints: BoxConstraints\(minWidth: 500\)|_loginPromptShown" flutter/lib/desktop/pages/desktop_home_page.dart
 rg -n "login_dialog_footer_note|withOpacity\(0.5\)|EdgeInsets.only\(top: 10\)" flutter/lib/common/widgets/login.dart
 rg -n "ScanButton|scan_page\.dart|ServerConfigImportExportWidgets\(|#custom-server" -S flutter/lib/mobile/pages/settings_page.dart flutter/lib/common/widgets/setting_widgets.dart src/ui/index.tis
 ```
