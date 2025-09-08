@@ -151,7 +151,7 @@ Obx(() {
 }),
 ```
 
-7) 桌面逻辑：连接前置拦截 + 统一登录对话框
+7) 桌面逻辑：连接前置拦截 + 统一登录对话框（minWidth=420，并复用“允许远程修改配置”权限）
 - `flutter/lib/common.dart`
 ```dart
 // connect(...) 顶部
@@ -162,11 +162,11 @@ if (isDesktop && (isWindows || isMacOS) && !gFFI.userModel.isLogin) {
 
 Future<void> showLoginRequiredDialog(BuildContext context) async {
   await gFFI.dialogManager.show((setState, close, ctx) {
-    onGoLogin() { close(); loginDialog(); }
+    onGoLogin() async { if (await isRemoteConfigBlocked()) return; close(); loginDialog(); }
     return CustomAlertDialog(
       title: Text(translate('login_required_dialog_title2')),
       content: Text(translate('login_required_dialog_body2')),
-      contentBoxConstraints: BoxConstraints(minWidth: 500),
+      contentBoxConstraints: BoxConstraints(minWidth: 420),
       actions: [
         dialogButton(translate('Cancel'), onPressed: close, isOutline: true),
         dialogButton(translate('go_to_login'), onPressed: onGoLogin),
@@ -178,7 +178,7 @@ Future<void> showLoginRequiredDialog(BuildContext context) async {
 }
 ```
 
-8) 桌面兜底：服务端错误字符串拦截
+8) 桌面兜底：服务端错误字符串拦截（minWidth=420，并复用权限）
 - `flutter/lib/desktop/pages/desktop_home_page.dart`
 ```dart
 final error = await bind.mainGetError();
@@ -186,11 +186,11 @@ if (error == "Connection failed, please login!" && (isWindows || isMacOS)
     && !gFFI.userModel.isLogin && !_loginPromptShown) {
   _loginPromptShown = true;
   gFFI.dialogManager.show((setState, close, context) {
-    onGoLogin() { close(); _loginPromptShown = false; loginDialog(); }
+    onGoLogin() async { if (await isRemoteConfigBlocked()) { return; } close(); _loginPromptShown = false; loginDialog(); }
     return CustomAlertDialog(
       title: Text(translate('login_required_dialog_title2')),
       content: Text(translate('login_required_dialog_body2')),
-      contentBoxConstraints: BoxConstraints(minWidth: 500),
+      contentBoxConstraints: BoxConstraints(minWidth: 420),
       actions: [
         dialogButton(translate('Cancel'), onPressed: () { _loginPromptShown = false; close(); }, isOutline: true),
         dialogButton(translate('go_to_login'), onPressed: onGoLogin),
@@ -239,8 +239,8 @@ rg -n "get_permanent_password\(|Config::get_permanent_password" src/ipc.rs
 rg -n "login_required_hint_under_input|login_required_dialog_title2|login_required_dialog_body2|go_to_login|login_dialog_footer_note" src/lang/cn.rs src/lang/en.rs
 rg -n "Icons.person|DesktopSettingPage.switch2page\(SettingsTabKey.account\)|loginDialog\(" flutter/lib/desktop/pages/desktop_tab_page.dart
 rg -n "login_required_hint_under_input|0xFF606060|0xFFE0E0E0|marginOnly\(top: 10\)" flutter/lib/desktop/pages/connection_page.dart
-rg -n "connect\(BuildContext|showLoginRequiredDialog\(|contentBoxConstraints: BoxConstraints\(minWidth: 500\)|dialogButton\(translate\('go_to_login'\)|dialogButton\(translate\('Cancel'\)" flutter/lib/common.dart
-rg -n "Connection failed, please login!|login_required_dialog_title2|login_required_dialog_body2|contentBoxConstraints: BoxConstraints\(minWidth: 500\)|_loginPromptShown" flutter/lib/desktop/pages/desktop_home_page.dart
+rg -n "connect\(BuildContext|showLoginRequiredDialog\(|contentBoxConstraints: BoxConstraints\(minWidth: 420\)|isRemoteConfigBlocked\(|dialogButton\(translate\('go_to_login'\)|dialogButton\(translate\('Cancel'\)" flutter/lib/common.dart
+rg -n "Connection failed, please login!|login_required_dialog_title2|login_required_dialog_body2|contentBoxConstraints: BoxConstraints\(minWidth: 420\)|_loginPromptShown|isRemoteConfigBlocked\(" flutter/lib/desktop/pages/desktop_home_page.dart
 rg -n "login_dialog_footer_note|withOpacity\(0.5\)|EdgeInsets.only\(top: 10\)" flutter/lib/common/widgets/login.dart
 rg -n "ScanButton|scan_page\.dart|ServerConfigImportExportWidgets\(|#custom-server" -S flutter/lib/mobile/pages/settings_page.dart flutter/lib/common/widgets/setting_widgets.dart src/ui/index.tis
 ```

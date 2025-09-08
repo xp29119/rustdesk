@@ -707,7 +707,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           systemError = ""; // avoid showing fallback card for this case
           setState(() {});
           gFFI.dialogManager.show((setState, close, context) {
-            onGoLogin() {
+            onGoLogin() async {
+              if (await isRemoteConfigBlocked()) {
+                return;
+              }
               close();
               _loginPromptShown = false;
               loginDialog();
@@ -715,7 +718,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             return CustomAlertDialog(
               title: Text(translate('login_required_dialog_title2')),
               content: Text(translate('login_required_dialog_body2')),
-              contentBoxConstraints: BoxConstraints(minWidth: 500),
+              contentBoxConstraints: BoxConstraints(minWidth: 420),
               actions: [
                 dialogButton(translate('Cancel'), onPressed: () { _loginPromptShown = false; close(); }, isOutline: true),
                 dialogButton(translate('go_to_login'), onPressed: onGoLogin),

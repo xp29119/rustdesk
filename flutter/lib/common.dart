@@ -2697,14 +2697,15 @@ Timer periodic_immediate(Duration duration, Future<void> Function() callback) {
 // Unified login-required dialog for desktop
 Future<void> showLoginRequiredDialog(BuildContext context) async {
   await gFFI.dialogManager.show((setState, close, ctx) {
-    onGoLogin() {
+    onGoLogin() async {
+      if (await isRemoteConfigBlocked()) return;
       close();
       loginDialog();
     }
     return CustomAlertDialog(
       title: Text(translate('login_required_dialog_title2')),
       content: Text(translate('login_required_dialog_body2')),
-      contentBoxConstraints: BoxConstraints(minWidth: 500),
+      contentBoxConstraints: BoxConstraints(minWidth: 420),
       actions: [
         dialogButton(translate('Cancel'), onPressed: close, isOutline: true),
         dialogButton(translate('go_to_login'), onPressed: onGoLogin),
@@ -2969,6 +2970,16 @@ Future<bool> canBeBlocked() async {
   var option = option2bool(kOptionAllowRemoteConfigModification,
       await bind.mainGetOption(key: kOptionAllowRemoteConfigModification));
   return access_mode == 'view' || (access_mode.isEmpty && !option);
+}
+
+// Whether UI actions that modify configuration should be blocked
+// according to current remote session policy.
+Future<bool> isRemoteConfigBlocked() async {
+  try {
+    return stateGlobal.videoConnCount > 0 && await canBeBlocked();
+  } catch (_) {
+    return await canBeBlocked();
+  }
 }
 
 // to-do: web not implemented

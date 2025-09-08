@@ -108,7 +108,10 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
                         ? MyTheme.tabbar(context).selectedTabIconColor
                         : MyTheme.tabbar(context).unSelectedIconColor;
                     return InkWell(
-                      onTap: () {
+                      onTap: () async {
+                        if (await isRemoteConfigBlocked()) {
+                          return;
+                        }
                         if (gFFI.userModel.isLogin) {
                           // Always switch to Settings - Account
                           DesktopSettingPage.switch2page(SettingsTabKey.account);
