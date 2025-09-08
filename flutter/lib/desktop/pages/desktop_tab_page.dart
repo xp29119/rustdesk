@@ -108,12 +108,19 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
                         ? MyTheme.tabbar(context).selectedTabIconColor
                         : MyTheme.tabbar(context).unSelectedIconColor;
                     return InkWell(
-                      onTap: () {
+                      onTap: () async {
+                        final bool blocked =
+                            stateGlobal.videoConnCount > 0 && await canBeBlocked();
                         if (gFFI.userModel.isLogin) {
                           // Always switch to Settings - Account
                           DesktopSettingPage.switch2page(SettingsTabKey.account);
                         } else {
-                          loginDialog();
+                          if (blocked) {
+                            // follow original behavior: allow topbar action, but route to Settings (masked)
+                            DesktopSettingPage.switch2page(SettingsTabKey.account);
+                          } else {
+                            loginDialog();
+                          }
                         }
                       },
                       child: SizedBox(
