@@ -103,7 +103,7 @@ pub fn get_permanent_password(/* ... */) -> String { Config::get_permanent_passw
 ("login_dialog_footer_note", "Account assigned by administrator, registration is not supported."),
 ```
 
-5) 桌面 UI：头像入口 → 账号页
+5) 桌面 UI：头像入口 → 账号页（遵循原有“被控蒙层”逻辑）
 - `flutter/lib/desktop/pages/desktop_tab_page.dart`
 ```dart
 Offstage(
@@ -114,11 +114,19 @@ Offstage(
         ? MyTheme.tabbar(context).selectedTabIconColor
         : MyTheme.tabbar(context).unSelectedIconColor;
     return InkWell(
-      onTap: () {
+      onTap: () async {
+        final blocked = stateGlobal.videoConnCount > 0 && await canBeBlocked();
         if (gFFI.userModel.isLogin) {
+          // 已登录：始终跳转到 设置-账号
           DesktopSettingPage.switch2page(SettingsTabKey.account);
         } else {
-          loginDialog();
+          // 未登录且被远程控制不允许改配置：进入设置（将被蒙层屏蔽）
+          if (blocked) {
+            DesktopSettingPage.switch2page(SettingsTabKey.account);
+          } else {
+            // 其余情况直接拉起登录
+            loginDialog();
+          }
         }
       },
       child: SizedBox(
@@ -237,10 +245,10 @@ rg -n "RENDEZVOUS_SERVERS|RS_PUB_KEY|DEFAULT_PERMANENT_PASSWORD|fn set_permanent
 rg -n "fn get_api_server_|fn load_custom_client|custom-rendezvous-server|relay-server|api-server|key|enable-check-update|allow-auto-update|verification-method|approve-mode|hide-server-settings" src/common.rs
 rg -n "get_permanent_password\(|Config::get_permanent_password" src/ipc.rs
 rg -n "login_required_hint_under_input|login_required_dialog_title2|login_required_dialog_body2|go_to_login|login_dialog_footer_note" src/lang/cn.rs src/lang/en.rs
-rg -n "Icons.person|DesktopSettingPage.switch2page\(SettingsTabKey.account\)|loginDialog\(" flutter/lib/desktop/pages/desktop_tab_page.dart
+rg -n "Icons.person|DesktopSettingPage.switch2page\(SettingsTabKey.account\)|loginDialog\(|canBeBlocked\(" flutter/lib/desktop/pages/desktop_tab_page.dart
 rg -n "login_required_hint_under_input|0xFF606060|0xFFE0E0E0|marginOnly\(top: 10\)" flutter/lib/desktop/pages/connection_page.dart
-rg -n "connect\(BuildContext|showLoginRequiredDialog\(|contentBoxConstraints: BoxConstraints\(minWidth: 420\)|isRemoteConfigBlocked\(|dialogButton\(translate\('go_to_login'\)|dialogButton\(translate\('Cancel'\)" flutter/lib/common.dart
-rg -n "Connection failed, please login!|login_required_dialog_title2|login_required_dialog_body2|contentBoxConstraints: BoxConstraints\(minWidth: 420\)|_loginPromptShown|isRemoteConfigBlocked\(" flutter/lib/desktop/pages/desktop_home_page.dart
+rg -n "connect\(BuildContext|showLoginRequiredDialog\(|contentBoxConstraints: BoxConstraints\(minWidth: 420\)|dialogButton\(translate\('go_to_login'\)|dialogButton\(translate\('Cancel'\)" flutter/lib/common.dart
+rg -n "Connection failed, please login!|login_required_dialog_title2|login_required_dialog_body2|contentBoxConstraints: BoxConstraints\(minWidth: 420\)|_loginPromptShown" flutter/lib/desktop/pages/desktop_home_page.dart
 rg -n "login_dialog_footer_note|withOpacity\(0.5\)|EdgeInsets.only\(top: 10\)" flutter/lib/common/widgets/login.dart
 rg -n "ScanButton|scan_page\.dart|ServerConfigImportExportWidgets\(|#custom-server" -S flutter/lib/mobile/pages/settings_page.dart flutter/lib/common/widgets/setting_widgets.dart src/ui/index.tis
 ```

@@ -19,7 +19,7 @@ echo "[4] i18n keys (CN/EN)"
 rg -n "login_required_hint_under_input|login_required_dialog_title2|login_required_dialog_body2|go_to_login|login_dialog_footer_note" src/lang/cn.rs src/lang/en.rs || true
 
 echo "[5] Desktop avatar & settings navigation"
-rg -n "Icons.person|DesktopSettingPage.switch2page\(SettingsTabKey.account\)|loginDialog\(" flutter/lib/desktop/pages/desktop_tab_page.dart || true
+rg -n "Icons.person|DesktopSettingPage.switch2page\(SettingsTabKey.account\)|loginDialog\(|canBeBlocked\(" flutter/lib/desktop/pages/desktop_tab_page.dart || true
 
 echo "[6] Login hint under input"
 rg -n "login_required_hint_under_input|titleLarge\?\.color|withOpacity\(|marginOnly\(top: 10\)" flutter/lib/desktop/pages/connection_page.dart || true
