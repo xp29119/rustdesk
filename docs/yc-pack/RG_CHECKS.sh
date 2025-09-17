@@ -36,5 +36,8 @@ rg -n "login_dialog_footer_note|withOpacity\(0.5\)|EdgeInsets.only\(top: 10\)" f
 echo "[10] Mobile & Sciter entry hiding"
 rg -n "ScanButton|scan_page\.dart|ServerConfigImportExportWidgets\(|#custom-server" -S flutter/lib/mobile/pages/settings_page.dart flutter/lib/common/widgets/setting_widgets.dart src/ui/index.tis || true
 
+echo "[11] Desktop auto-start service on launch"
+rg -n "runMainApp\(|mainCheckConnectStatus\(|kOptionStopService|start_service\(true\)" flutter/lib/main.dart || true
+
 echo "Done."
 

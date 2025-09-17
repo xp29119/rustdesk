@@ -186,6 +186,18 @@ Future<void> showLoginRequiredDialog(BuildContext context) async {
 }
 ```
 
+11) 桌面逻辑：应用启动时自动启动服务（Windows/macOS）
+- `flutter/lib/main.dart`
+```dart
+// runMainApp(...) 内，在 bind.mainCheckConnectStatus() 之后：
+if (isWindows || isMacOS) {
+  final stopped = await mainGetBoolOption(kOptionStopService);
+  if (stopped) {
+    await start_service(true);
+  }
+}
+```
+
 8) 桌面兜底：服务端错误字符串拦截（minWidth=420；不改变原有蒙层策略）
 - `flutter/lib/desktop/pages/desktop_home_page.dart`
 ```dart
@@ -251,6 +263,7 @@ rg -n "connect\(BuildContext|showLoginRequiredDialog\(|contentBoxConstraints: Bo
 rg -n "Connection failed, please login!|login_required_dialog_title2|login_required_dialog_body2|contentBoxConstraints: BoxConstraints\(minWidth: 420\)|_loginPromptShown" flutter/lib/desktop/pages/desktop_home_page.dart
 rg -n "login_dialog_footer_note|withOpacity\(0.5\)|EdgeInsets.only\(top: 10\)" flutter/lib/common/widgets/login.dart
 rg -n "ScanButton|scan_page\.dart|ServerConfigImportExportWidgets\(|#custom-server" -S flutter/lib/mobile/pages/settings_page.dart flutter/lib/common/widgets/setting_widgets.dart src/ui/index.tis
+rg -n "runMainApp\(|mainCheckConnectStatus\(|kOptionStopService|start_service\(true\)" flutter/lib/main.dart
 ```
 
 ---

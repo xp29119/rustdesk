@@ -138,6 +138,13 @@ void runMainApp(bool startService) async {
   checkUpdate();
   // trigger connection status updater
   await bind.mainCheckConnectStatus();
+  // Auto-start service on Windows/macOS when app opens (only if currently stopped)
+  if (isWindows || isMacOS) {
+    final stopped = await mainGetBoolOption(kOptionStopService);
+    if (stopped) {
+      await start_service(true);
+    }
+  }
   if (startService) {
     gFFI.serverModel.startService();
     bind.pluginSyncUi(syncTo: kAppTypeMain);
