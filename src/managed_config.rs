@@ -56,6 +56,9 @@ mod tests {
         assert_eq!(Config::get_option(keys::OPTION_RELAY_SERVER), RELAY);
         assert_eq!(Config::get_option(keys::OPTION_KEY), PUBLIC_KEY);
         assert!(!Config::get_bool_option(keys::OPTION_ALLOW_AUTO_UPDATE));
-        assert_eq!(LocalConfig::get_option(keys::OPTION_ENABLE_CHECK_UPDATE), "N");
+        assert_eq!(
+            LocalConfig::get_option(keys::OPTION_ENABLE_CHECK_UPDATE),
+            "N"
+        );
     }
 }

@@ -2,6 +2,16 @@
 name: Internal clients (Windows, macOS, Android)
 'on':
   workflow_dispatch: {}
+  push:
+    branches: [codex/internal-client-1.5.0]
+    paths:
+    - .github/workflows/internal-clients.yml
+    - .gitmodules
+    - Cargo.toml
+    - Cargo.lock
+    - src/**
+    - libs/**
+    - flutter/**
 permissions:
   contents: read
 concurrency:

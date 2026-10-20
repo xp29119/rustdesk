@@ -280,7 +280,7 @@ class Control:
         return session
 
     async def meta(self, request):
-        return web.json_response({"setup_required": not self.has_admin(), "version": "0.1.0"})
+        return web.json_response({"setup_required": not self.has_admin(), "version": "0.1.1"})
 
     async def setup(self, request):
         self.web_origin(request)

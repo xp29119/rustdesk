@@ -117,9 +117,9 @@ An interrupted process is recorded with an unknown ending, not an invented time.
 
 ## Remaining work
 
-The loopback service is installed and healthy at `127.0.0.1:8088`; no production
-administrator has been initialized. Its deployed version predates the
-refresh-authenticated logout addition and must be updated before client testing.
+The loopback service 0.1.1 is installed and healthy at `127.0.0.1:8088`; no production
+administrator has been initialized. The deployed version includes
+refresh-authenticated logout for pending devices.
 Public HTTPS is not active; RustDesk hbbs/hbbr remain stopped and disabled.
 
 Resolve a reliable certificate issuance and renewal route; update the loopback

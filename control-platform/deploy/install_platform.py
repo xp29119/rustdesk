@@ -126,7 +126,8 @@ def main():
         contents = contents.replace(f"Group={service}", f"Group={grp.getgrgid(user.pw_gid).gr_name}")
         Path(f"/etc/systemd/system/{service}.service").write_text(contents)
     run("systemctl", "daemon-reload")
-    run("systemctl", "enable", "--now", "rdcontrol.service")
+    run("systemctl", "enable", "rdcontrol.service")
+    run("systemctl", "restart", "rdcontrol.service")
     for _ in range(30):
         try:
             with urllib.request.urlopen("http://127.0.0.1:8088/api/meta", timeout=2) as response:
@@ -136,7 +137,7 @@ def main():
             time.sleep(0.5)
     else:
         raise RuntimeError("Control service did not become healthy")
-    print("Control service healthy on 127.0.0.1:8088; setup required:", meta["setup_required"])
+    print("Control service", meta["version"], "healthy on 127.0.0.1:8088; setup required:", meta["setup_required"])
     print("Bootstrap code remains private at /var/lib/rdcontrol/bootstrap-token.txt")
     if not args.activate_gateway:
         print("HTTPS and RustDesk were NOT activated. Configure and verify certificate egress first.")
