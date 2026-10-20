@@ -61,20 +61,23 @@ pub fn request_from_ui(command: Command) -> ResultType<Response> {
 }
 
 pub fn register_transport() {
-    hbb_common::websocket::set_client_auth_provider(|url| {
-        Box::pin(async move {
-            match execute(Command::Headers { url }).await? {
-                Response::Headers {
-                    authorization,
-                    dpop,
-                } => Ok(vec![
-                    ("Authorization".into(), authorization),
-                    ("DPoP".into(), dpop),
-                ]),
-                _ => bail!("Managed login returned no transport authorization"),
-            }
-        })
-    });
+    hbb_common::websocket::set_client_auth_provider_with_root(
+        |url| {
+            Box::pin(async move {
+                match execute(Command::Headers { url }).await? {
+                    Response::Headers {
+                        authorization,
+                        dpop,
+                    } => Ok(vec![
+                        ("Authorization".into(), authorization),
+                        ("DPoP".into(), dpop),
+                    ]),
+                    _ => bail!("Managed login returned no transport authorization"),
+                }
+            })
+        },
+        crate::managed_config::TLS_ROOT_PEM,
+    );
 }
 
 pub async fn execute(command: Command) -> ResultType<Response> {
@@ -109,10 +112,11 @@ pub async fn execute_owned(command: Command) -> ResultType<Response> {
             #[cfg(target_os = "android")]
             let vault = Arc::new(android::AndroidVault);
             let broker = Arc::new(
-                Broker::new(
+                Broker::new_with_tls_root(
                     crate::managed_config::API_ORIGIN,
                     std::env::consts::OS,
                     vault,
+                    crate::managed_config::TLS_ROOT_PEM,
                 )
                 .map_err(|error| error.to_string())?,
             );

@@ -1,17 +1,14 @@
 {
 	admin off
+	default_sni 8.138.230.183
+	skip_install_trust
 	servers {
 		protocols h1 h2
 	}
 }
 
 https://8.138.230.183 {
-	tls {
-		issuer acme {
-			dir https://acme-v02.api.letsencrypt.org/directory
-			profile shortlived
-		}
-	}
+	tls internal
 	@client path /api/auth/login /api/auth/refresh /api/auth/logout /api/me /ws/id /ws/relay
 	handle @client {
 		reverse_proxy 127.0.0.1:8088 {

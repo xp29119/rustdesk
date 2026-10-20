@@ -271,3 +271,19 @@ async fn offline_start_preserves_refresh_but_corrupt_storage_is_never_overwritte
     assert!(broker.execute(Command::Status).await.is_err());
     assert_eq!(vault.load().unwrap().unwrap(), b"corrupt private data");
 }
+
+
+/// Explicit deployment probe using only anonymous GETs; normal CI remains offline.
+#[tokio::test]
+#[ignore = "requires RDCONTROL_TLS_ORIGIN and RDCONTROL_TLS_ROOT"]
+async fn dedicated_ca_https_accepts_only_configured_trust_and_https() {
+    let origin = std::env::var("RDCONTROL_TLS_ORIGIN").unwrap();
+    let root = std::fs::read(std::env::var("RDCONTROL_TLS_ROOT").unwrap()).unwrap();
+    let broker = Broker::new_with_tls_root(&origin, "macos", Arc::new(MemoryVault::default()), &root).unwrap();
+    let response = broker.http.get(format!("{origin}/api/me")).send().await.unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert!(broker.http.get(origin.replacen("https://", "http://", 1)).send().await.is_err());
+    let normal = Broker::new(&origin, "macos", Arc::new(MemoryVault::default())).unwrap();
+    assert!(normal.http.get(format!("{origin}/api/me")).send().await.is_err());
+    assert!(Broker::new_with_tls_root(&origin, "macos", Arc::new(MemoryVault::default()), b"invalid certificate").is_err());
+}

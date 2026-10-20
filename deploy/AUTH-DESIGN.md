@@ -86,3 +86,15 @@ P2P 远控的数据可能不经过服务器，准确的会话结束和时长需�
 - hbb_common 仅增加可选 WSS 请求头提供器及严格 TLS 连接路径；未安装回调的既有行为保留。子模块固定到单一功能提交，未引入其他上游变动。
 
 实施顺序：账号与设备授权服务 → RustDesk 服务端强制鉴权 → 三端登录和安全存储 → 网页模块与日志 → 绕过测试和实机连接验证 → 云编译和签名交付。
+
+
+2026-10-21 专用 CA 接入更新
+用户已批准：阿里云使用 Caddy 专用内部 CA，定制客户端内置公开根证书；不安装系统根证书，不绕过证书校验。公网 ACME 出口已通过 Mac 恢复，但验证节点连接阿里云 80/443 超时，停止公网证书重试。
+- 客户端 HTTPS Broker 仅信任这份专用根证书，禁止明文和自动跳转；WSS 走同样的专用根证书验证，不使用系统或宽松 TLS 回退。保留未启用定制配置时的既有路径。
+- 新增 certs/rdcontrol-root.pem 为公开 CA 证书。DER SHA256：ceaadd7b8ccdb67654b3f64102deb248590391e3852ed2c1cb6f0536a5c085bc。CA 私钥和服务器私钥保留在阿里云 /var/lib/rdcontrol-caddy。
+- Caddy 明确 skip_install_trust，并配置 default_sni 8.138.230.183，确保不发送域名提示的 IP 客户端获得正确证书。有效期、IP SAN、证书链仍由客户端验证。
+- 真实服务验证：匿名 /api/me、/ws/id、/ws/relay 返回 401；公网管理页/API 返回 404；错误 IP 和默认系统根均拒绝证书；原生 TCP 21115–21119 外部探测超时，服务进程仅可使用回环网络。
+- Rust HTTPS 和 WSS 两项显式部署探针已通过。常规 CI 不依赖生产网络；运行忽略的部署探针需要 RDCONTROL_TLS_ROOT 和 RDCONTROL_TLS_ORIGIN/URL，探针只执行匿名请求，不使用用户密码或设备凭据。
+- 本次新增既有路径变化：src/managed_config.rs 内置公开 CA；src/managed_login.rs 将 CA 传给认证 Broker 和 WSS；libs/managed_auth/src/lib.rs 新增专用根证书构造方法；hbb_common/src/websocket.rs 仅扩展已新增的 managed 分支，使用单一私有根、无平台回退。没有修改旧 try_connect 路径。
+- 管理网页将在序岛 /apps/rustdesk/ 通过既有身份入口与私有 SSH 转发挂载，保持 RustDesk 独立管理员登录。Ali 不绑定域名，客户端远控不经过家庭网络。
+- 自动续期由 Caddy 内部发行器管理，已验证重启后 CA 保持不变；尚未经过完整的自然续期周期。

@@ -140,12 +140,15 @@ def main():
     print("Control service", meta["version"], "healthy on 127.0.0.1:8088; setup required:", meta["setup_required"])
     print("Bootstrap code remains private at /var/lib/rdcontrol/bootstrap-token.txt")
     if not args.activate_gateway:
-        print("HTTPS and RustDesk were NOT activated. Configure and verify certificate egress first.")
+        print("This step did not start or restart HTTPS/RustDesk. Review certificate mode before activation.")
         return
-    # Prove the restricted tunnel works before changing firewall or enabling public HTTPS.
-    run("curl", "-fsS", "--proxy", "http://127.0.0.1:18489", "--max-time", "15",
-        "https://acme-v02.api.letsencrypt.org/directory")
-    run(str(release / "deploy/caddy"), "validate", "--config", str(release / "deploy/Caddyfile"),
+    # Internal CA keys and certificates belong to the service account, never root's data directory.
+    config = (release / "deploy/Caddyfile").read_text()
+    if "tls internal" not in config or "skip_install_trust" not in config:
+        raise RuntimeError("Expected the approved client-only CA; no system trust installation")
+    run("runuser", "-u", "rdcontrol-caddy", "--", "env",
+        "XDG_DATA_HOME=/var/lib/rdcontrol-caddy", "XDG_CONFIG_HOME=/var/lib/rdcontrol-caddy",
+        str(release / "deploy/caddy"), "validate", "--config", str(release / "deploy/Caddyfile"),
         "--adapter", "caddyfile")
     protect_native_ports()
     for service in ("hbbs", "hbbr"):

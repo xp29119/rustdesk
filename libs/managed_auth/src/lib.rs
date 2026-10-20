@@ -189,6 +189,28 @@ impl Broker {
         })
     }
 
+    /// Trust only this application's dedicated CA; keep hostname, expiry and chain verification.
+    pub fn new_with_tls_root(
+        origin: &str,
+        platform: &str,
+        vault: Arc<dyn Vault>,
+        root_pem: &[u8],
+    ) -> Result<Self> {
+        let roots = reqwest::Certificate::from_pem_bundle(root_pem)?;
+        ensure!(roots.len() == 1, "Expected exactly one dedicated root certificate");
+        let root = roots.into_iter().next().context("Missing dedicated root certificate")?;
+        let mut broker = Self::new(origin, platform, vault)?;
+        broker.http = Client::builder()
+            .https_only(true)
+            .redirect(Policy::none())
+            .connect_timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(20))
+            .tls_built_in_root_certs(false)
+            .add_root_certificate(root)
+            .build()?;
+        Ok(broker)
+    }
+
     async fn load(&self) -> Result<Session> {
         let vault = self.vault.clone();
         let raw = tokio::task::spawn_blocking(move || vault.load()).await??;

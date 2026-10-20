@@ -4,6 +4,7 @@ use hbb_common::config;
 pub const SERVER: &str = "wss://8.138.230.183/ws/id";
 pub const RELAY: &str = "wss://8.138.230.183/ws/relay";
 pub const API_ORIGIN: &str = "https://8.138.230.183";
+pub const TLS_ROOT_PEM: &[u8] = include_bytes!("../certs/rdcontrol-root.pem");
 pub const PUBLIC_KEY: &str = "qCRzeSq8oWC86sCeNAnJdLujx381mVtOfvP5g8nE0M8=";
 pub const DISABLE_UPDATES: &str = "disable-client-updates";
 
