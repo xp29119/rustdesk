@@ -68,7 +68,7 @@ def prepare(fingerprint, expected_host):
         private_file(proxy, (Path(__file__).parent / "mac_cert_proxy.py").read_bytes())
         ssh_args = [
             "/usr/bin/ssh", "-F", "/dev/null", "-N", "-T",
-            "-i", str(identity), "-o", "UserKnownHostsFile=" + str(BASE / "known_hosts"),
+            "-i", str(identity), "-o", 'UserKnownHostsFile="' + str(BASE / "known_hosts") + '"',
             "-o", "StrictHostKeyChecking=yes", "-o", "HostKeyAlgorithms=ssh-ed25519",
             "-o", "IdentitiesOnly=yes", "-o", "IdentityAgent=none",
             "-o", "PreferredAuthentications=publickey", "-o", "PasswordAuthentication=no",

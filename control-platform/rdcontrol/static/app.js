@@ -15,8 +15,8 @@ async function ask(message) {
 }
 function toast(message) { $("notice").textContent=message; $("notice").hidden=false; setTimeout(()=>{$("notice").hidden=true;},7000); }
 async function api(path, body) {
-  const options={credentials:"same-origin",headers:{}};
-  if(body !== undefined){ options.method="POST"; options.headers={"Content-Type":"application/json","X-CSRF-Token":csrf}; options.body=JSON.stringify(body); }
+  const options={credentials:"same-origin",headers:{"Accept":"application/json"}};
+  if(body !== undefined){ options.method="POST"; options.headers={"Accept":"application/json","Content-Type":"application/json","X-CSRF-Token":csrf}; options.body=JSON.stringify(body); }
   const res=await fetch(new URL(path.replace(/^\/+/, ""),apiBase),options); const data=await res.json();
   if(!res.ok) { if(res.status===401 && !$("console").hidden){showAuth();} throw new Error(errors[data.error] || data.error || `请求失败 (${res.status})`); }
   return data;
