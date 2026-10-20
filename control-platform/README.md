@@ -10,7 +10,7 @@ separate administrator cookie. There is no public account registration.
   exercised using temporary test data.
 - The gateway has been tested against a binary WebSocket test backend. Native
   RustDesk client integration and end-to-end remote desktop tests remain pending.
-- Public HTTPS deployment requires the certificate-only egress described below.
+- The IP entrance now uses a dedicated application CA. Only the custom clients trust it; no system root certificate is installed.
 - The first version uses WSS and relay transport. It does not promise P2P
   performance or label an open transport as a successful remote desktop session.
 - An approved endpoint retains RustDesk's own remote-control password/consent
@@ -74,11 +74,11 @@ interval. The final client application must also respect logout and expiry.
 when the deployment bundle is prepared. Without `--activate-gateway` it installs
 only the loopback control service. It does not open HTTPS or start RustDesk.
 
-Activation requires a working certificate-only SSH tunnel. It:
+Activation requires the reviewed internal-CA configuration. It:
 
-1. Validates Caddy and the tunnel.
+1. Validates Caddy as its restricted service user, with system trust installation disabled.
 2. Blocks external TCP 21115–21119 and UDP 21116, including the old direct path.
-3. Allows TCP 80/443 for ACME and HTTPS, preserving the existing SSH and AWG rules.
+3. Allows TCP 80/443 for the HTTPS entrance/redirect, preserving existing SSH and AWG rules.
 4. Restricts the RustDesk systemd services to loopback networking.
 5. Starts Caddy and the RustDesk backends.
 
@@ -86,58 +86,48 @@ Caddy advertises HTTP/1.1 and HTTP/2 only so it does not bind UDP 443, which is
 already used by AWG. The trusted proxy overwrites `X-Real-IP`; the application
 trusts that header only from loopback. Neither component logs bearer credentials.
 
-## Certificate transport
+## Dedicated certificate trust
 
-The current candidate uses the user's domestic Mac, without binding any domain
-to ali. Read-only checks on that Mac confirmed access to ali TCP 22 and both ACME
-directories through its existing Surge HTTP proxy at `127.0.0.1:6152`.
-No new Mac/ali authorization has yet been installed.
+The user approved a dedicated internal CA after public ACME validation failed.
+The Mac tunnel fixed outbound ACME access, but Let's Encrypt's inbound HTTP-01
+and TLS-ALPN-01 connections to the server both timed out. No public IP certificate
+was issued. This network failure is not bypassed by disabling TLS validation.
 
-Prepared scripts:
+Caddy now uses `tls internal`, `skip_install_trust`, and `default_sni 8.138.230.183`.
+Its restricted data directory `/var/lib/rdcontrol-caddy` holds the CA and server
+private keys. Only the public CA certificate is copied to `certs/rdcontrol-root.pem`
+in the client repository. Its DER SHA-256 fingerprint is
+`ceaadd7b8ccdb67654b3f64102deb248590391e3852ed2c1cb6f0536a5c085bc`.
 
-- `mac_cert_proxy.py`: loopback `18488`, only HTTP CONNECT to the two exact ACME
-  hostnames on TCP 443; always through Surge, no direct fallback or TLS interception.
-- `install_mac_link.py`: separate ordinary-user LaunchAgents and a dedicated
-  SSH identity. Preparation and activation are explicit separate steps.
-- `authorize_mac_link.py`: dry-run by default; adds the key-only account
-  `rd-mac-webcert` only with `--apply`. No sudo/shell/commands/SFTP. `PermitOpen`
-  limits local forwarding to ali `127.0.0.1:8088`; `PermitListen` limits reverse
-  forwarding to ali `127.0.0.1:18489`. The key itself carries the same restrictions.
+Managed HTTPS and WSS trust only that root, validating the chain, expiry and fixed
+IP. They do not install system trust, use permissive platform fallback, or downgrade
+to HTTP. Normal browsers are not expected to trust the IP certificate; administrators
+use the existing portal's publicly trusted HTTPS address.
 
-The proposed combined link carries the management page via Mac loopback `18490`
-and certificate egress via ali loopback `18489`. It carries no remote-desktop
-data. Caddy's `HTTPS_PROXY` is `http://127.0.0.1:18489`. Its certificate private key
-stays on ali. A Mac reboot still requires the ordinary user session and Surge;
-pre-login availability has not been verified. Actual issuance, reconnection and
-renewal acceptance remain required, including the CA's inbound challenge.
+`enable_internal_ca.py` transitions the existing installation using a narrow Caddy
+service override. The deployed runtime config is `/etc/rdcontrol/Caddyfile.internal`;
+the override is `rdcontrol-caddy.service.d/internal-ca.conf`. Preserve these deployment
+choices when updating service files. The CA must not be regenerated during upgrades.
+A CA replacement requires rebuilding and redistributing clients; the workflow watches
+`certs/**` for this reason. Keep encrypted backups of the server's private data.
 
-### Earlier overseas attempt
+Live verification passed for the trusted IP certificate, anonymous API/WSS rejection,
+public administration denial, native-port isolation, wrong-IP rejection, and rejection
+without the dedicated root. The Rust HTTPS and WSS deployment probes also passed.
+Caddy maintains internal certificates automatically. Restart retained the CA; a full
+natural renewal interval has not yet been observed.
 
-The directly verified exit is `194.156.163.226`. Its Ed25519 host fingerprint is:
-`SHA256:E8ZPynQ4ZbYLvlY9Jz/+LHKHzj5WzbtmIQ9seRDnbRs`.
-
-`prepare_certificate_client.py` generates a dedicated private key on ali gz.
-`authorize_certificate_exit.py` uses only the matching public key on the exit.
-The proposed exit account is `rd-cert`, restricted to:
-
-- Source IP `8.138.230.183`.
-- Forwarding to the production and staging Let's Encrypt ACME hosts on TCP 443.
-- No shell, SFTP, agent/X11 forwarding, reverse forwarding or public proxy port.
-
-The user approved this account and it is installed. A dedicated SSH listener on
-TCP 443 accepts only this account, and its firewall allows only `8.138.230.183`.
-Original SSH 22 and the existing service on 18786 were preserved. Both directions
-between these two servers timed out; the source's cloud firewall was inspected
-and no relevant block was found. The ali-side tunnel has therefore not been
-activated. Do not treat this route as a functioning renewal path. The earlier
-deployment used `HTTPS_PROXY=socks5h://127.0.0.1:1080`; the new draft replaces it
-with the Mac route only after approval. Backend requests use loopback directly.
-The HTTPS certificate private key stays on ali gz.
+The approved Mac link continues to carry only the private administration page via
+Mac loopback `18490` to server loopback `8088`. Its account cannot use shell, commands,
+SFTP or arbitrary forwarding. Denial and automatic SSH reconnection were verified.
+The earlier certificate proxy/reverse forwarding is no longer required for renewal;
+retire only those task-created resources after final validation, preserving management
+forwarding and all existing Seqdao/DDNS/Surge/original login services.
 
 ## Existing Seqdao management entrance
 
 The user chose to preserve RustDesk's independent login service while presenting
-its management page through the existing Seqdao portal. The backend draft 0.1.2
+its management page through the existing Seqdao portal. The backend 0.1.2
 accepts `--admin-origin`, `--admin-cookie-path`, and `--admin-cookie-name` for this purpose. They do not
 change the native client's public URL, JWT issuer or DPoP destination.
 
@@ -152,9 +142,9 @@ remain enabled. The portal gateway must enforce existing portal authorization,
 proxy only the management allowlist and `rdcontrol_admin` cookie, and strip all Seqdao credentials/identity
 headers. RustDesk still requires its own administrator cookie and CSRF token.
 
-The remote helper is preparing the portal-only patch separately. It has not
-been installed. Do not replace the existing Seqdao deployment directory.
-The draft public Caddy entrance allows only the six client authentication/WSS
+The portal-only three-file patch is reviewed and being deployed separately.
+Do not replace the existing Seqdao deployment directory.
+The public Caddy entrance allows only the six client authentication/WSS
 paths; administrative pages and APIs are reachable through the private portal
 channel. Caddy's separate administrative configuration API is disabled.
 
@@ -167,13 +157,11 @@ An interrupted process is recorded with an unknown ending, not an invented time.
 
 ## Remaining work
 
-The loopback service 0.1.1 is installed and healthy at `127.0.0.1:8088`; no production
-administrator has been initialized. The deployed version includes
-refresh-authenticated logout for pending devices.
-Public HTTPS is not active; RustDesk hbbs/hbbr remain stopped and disabled.
+The loopback service 0.1.2 is healthy at `127.0.0.1:8088`. RustDesk hbbs/hbbr are active
+with loopback-only systemd networking and external native-port firewall drops.
+Dedicated-CA HTTPS is active, but no production administrator has been initialized.
 
-Resolve a reliable certificate issuance and renewal route; update the loopback
-service; validate HTTPS and native-port isolation; compile and test native login,
-service IPC and protected credential storage on all three platforms; run actual
-RustDesk connection/revocation/reboot tests; then deliver internal installers.
-The added Rust client module has local protocol tests, not completed installer QA.
+Complete the real administrator portal setup, finish dedicated-CA native builds,
+then test approved login, service IPC, protected storage, remote desktop connection,
+revocation and reboot behavior on all three platforms before distributing installers.
+Earlier Android/macOS ARM64 build artifacts predate the CA change and are not final.

@@ -10,6 +10,7 @@ name: Internal clients (Windows, macOS, Android)
     - Cargo.toml
     - Cargo.lock
     - src/**
+    - certs/**
     - libs/**
     - flutter/**
 permissions:
