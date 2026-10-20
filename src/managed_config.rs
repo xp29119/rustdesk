@@ -17,6 +17,10 @@ pub fn init() {
     }
     #[cfg(feature = "managed-client")]
     crate::managed_login::register_transport();
+    config::HARD_SETTINGS
+        .write()
+        .unwrap()
+        .insert("disable-account".into(), "Y".into());
     config::OVERWRITE_SETTINGS.write().unwrap().extend([
         (keys::OPTION_CUSTOM_RENDEZVOUS_SERVER.into(), SERVER.into()),
         (keys::OPTION_RELAY_SERVER.into(), RELAY.into()),
@@ -53,6 +57,7 @@ mod tests {
         LocalConfig::set_option(keys::OPTION_ENABLE_CHECK_UPDATE.into(), "Y".into());
         assert_eq!(Config::get_rendezvous_server(), SERVER);
         assert!(config::use_ws());
+        assert!(config::is_disable_account());
         assert_eq!(Config::get_option(keys::OPTION_RELAY_SERVER), RELAY);
         assert_eq!(Config::get_option(keys::OPTION_KEY), PUBLIC_KEY);
         assert!(!Config::get_bool_option(keys::OPTION_ALLOW_AUTO_UPDATE));

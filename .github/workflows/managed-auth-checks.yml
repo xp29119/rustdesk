@@ -13,23 +13,6 @@ concurrency:
   group: managed-auth-checks-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  certificate-network-feasibility:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 2
-    steps:
-      - name: Read-only connectivity probe (no login or server changes)
-        shell: python
-        run: |
-          import json, socket, urllib.request
-          with urllib.request.urlopen("https://acme-v02.api.letsencrypt.org/directory", timeout=15) as response:
-              directory = json.load(response)
-          print("ACME reachable; short-lived profile:", "shortlived" in directory.get("meta", {}).get("profiles", {}))
-          with socket.create_connection(("8.138.230.183", 22), timeout=12) as connection:
-              connection.settimeout(5)
-              banner = connection.recv(128)
-          if not banner.startswith(b"SSH-2.0-"):
-              raise RuntimeError("Unexpected server protocol")
-          print("Domestic server SSH reachable from GitHub runner; authentication was not attempted.")
   client-auth:
     strategy:
       fail-fast: false

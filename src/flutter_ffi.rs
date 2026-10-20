@@ -40,6 +40,8 @@ lazy_static::lazy_static! {
 
 fn initialize(app_dir: &str, custom_client_config: &str) {
     flutter::async_tasks::start_flutter_async_runner();
+    #[cfg(feature = "managed-client")]
+    allow_err!(crate::managed_login::start_ui_worker());
     // `APP_DIR` is set in `main_get_data_dir_ios()` on iOS.
     #[cfg(not(target_os = "ios"))]
     {
@@ -981,10 +983,10 @@ pub fn main_get_login_device_info() -> SyncReturn<String> {
     SyncReturn(get_login_device_info_json())
 }
 
-pub async fn main_managed_auth(command: String) -> String {
+pub fn main_managed_auth(command: String) -> String {
     #[cfg(feature = "managed-client")]
     {
-        let result = async {
+        let result = (|| {
             if command.len() > 8192 {
                 hbb_common::bail!("Invalid managed login request");
             }
@@ -992,8 +994,8 @@ pub async fn main_managed_auth(command: String) -> String {
             if matches!(command, managed_auth::Command::Headers { .. }) {
                 hbb_common::bail!("Transport credentials are unavailable to the UI");
             }
-            crate::managed_login::execute(command).await
-        }.await;
+            crate::managed_login::request_from_ui(command)
+        })();
         return match result {
             Ok(response) => serde_json::json!({"ok": true, "result": response}).to_string(),
             Err(error) => serde_json::json!({"ok": false, "error": error.to_string()}).to_string(),

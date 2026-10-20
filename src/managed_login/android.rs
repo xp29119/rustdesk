@@ -21,7 +21,7 @@ pub extern "system" fn Java_ffi_FFI_initManagedAuth(
         let _ = CONTEXT.set((vm, store));
         Ok(())
     })();
-    if result.is_err() {
+    if result.is_err() || crate::managed_login::start_ui_worker().is_err() {
         let _ = env.throw_new(
             "java/lang/IllegalStateException",
             "Managed credential storage unavailable",
