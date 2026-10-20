@@ -1,5 +1,5 @@
 {
-	admin 127.0.0.1:2019
+	admin off
 	servers {
 		protocols h1 h2
 	}
@@ -12,7 +12,13 @@ https://8.138.230.183 {
 			profile shortlived
 		}
 	}
-	reverse_proxy 127.0.0.1:8088 {
-		header_up X-Real-IP {remote_host}
+	@client path /api/auth/login /api/auth/refresh /api/auth/logout /api/me /ws/id /ws/relay
+	handle @client {
+		reverse_proxy 127.0.0.1:8088 {
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	handle {
+		respond "Not found" 404
 	}
 }

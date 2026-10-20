@@ -1,14 +1,14 @@
 [Unit]
 Description=HTTPS entry for private control platform
-After=network-online.target rdcontrol.service rdcontrol-cert-tunnel.service
-Wants=network-online.target rdcontrol.service rdcontrol-cert-tunnel.service
+After=network-online.target rdcontrol.service
+Wants=network-online.target rdcontrol.service
 
 [Service]
 User=rdcontrol-caddy
 Group=rdcontrol-caddy
 Environment=XDG_DATA_HOME=/var/lib/rdcontrol-caddy
 Environment=XDG_CONFIG_HOME=/var/lib/rdcontrol-caddy
-Environment=HTTPS_PROXY=socks5h://127.0.0.1:1080
+Environment=HTTPS_PROXY=http://127.0.0.1:18489
 Environment=NO_PROXY=127.0.0.1,localhost,::1
 ExecStart=/opt/rdcontrol/current/deploy/caddy run --config /opt/rdcontrol/current/deploy/Caddyfile --adapter caddyfile
 Restart=on-failure

@@ -58,6 +58,9 @@ mod tests {
         assert_eq!(Config::get_rendezvous_server(), SERVER);
         assert!(config::use_ws());
         assert!(config::is_disable_account());
+        assert!(
+            crate::common::get_api_server("https://other.example".into(), SERVER.into()).is_empty()
+        );
         assert_eq!(Config::get_option(keys::OPTION_RELAY_SERVER), RELAY);
         assert_eq!(Config::get_option(keys::OPTION_KEY), PUBLIC_KEY);
         assert!(!Config::get_bool_option(keys::OPTION_ALLOW_AUTO_UPDATE));

@@ -66,7 +66,8 @@ def require(condition, message="Access denied", status=403):
 
 
 class Control:
-    def __init__(self, data_dir, public_url, id_upstream, relay_upstream):
+    def __init__(self, data_dir, public_url, id_upstream, relay_upstream, *,
+                 admin_origin=None, admin_cookie_path="/", admin_cookie_name="control_session"):
         self.public_url = public_url.rstrip("/")
         url = urlsplit(self.public_url)
         require(
@@ -75,7 +76,22 @@ class Control:
             "HTTPS is required outside loopback", 400,
         )
         require(not url.path and not url.query and not url.username, "Invalid public URL", 400)
-        self.secure = url.scheme == "https"
+        self.admin_origin = (admin_origin or self.public_url).rstrip("/")
+        admin_url = urlsplit(self.admin_origin)
+        require(
+            (admin_url.scheme == "https" or
+             (admin_url.scheme == "http" and admin_url.hostname in ("127.0.0.1", "localhost")))
+            and bool(admin_url.hostname) and not admin_url.username and not admin_url.password
+            and not admin_url.path and not admin_url.query and not admin_url.fragment,
+            "Invalid administration origin", 400,
+        )
+        require(re.fullmatch(r"/(?:[A-Za-z0-9_-]+/)*", admin_cookie_path),
+                "Invalid administrator cookie path", 400)
+        self.admin_cookie_path = admin_cookie_path
+        require(re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", admin_cookie_name),
+                "Invalid administrator cookie name", 400)
+        self.admin_cookie_name = admin_cookie_name
+        self.secure = admin_url.scheme == "https"
         data_dir = Path(data_dir)
         data_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.store = Store(data_dir / "control.sqlite3")
@@ -152,7 +168,7 @@ class Control:
         return data
 
     def web_origin(self, request):
-        require(request.headers.get("Origin") == self.public_url, "Invalid request origin")
+        require(request.headers.get("Origin") == self.admin_origin, "Invalid request origin")
 
     async def verify_password(self, request, username, password, admin=False):
         self.rate("login:" + self.ip(request))
@@ -265,7 +281,7 @@ class Control:
         return result
 
     def admin(self, request, mutate=False):
-        token = request.cookies.get("control_session", "")
+        token = request.cookies.get(self.admin_cookie_name, "")
         require(0 < len(token) <= 128, "Admin login required", 401)
         session = self.store.one(
             """SELECT a.*,u.username FROM admin_sessions a JOIN users u ON u.id=a.user_id
@@ -280,7 +296,7 @@ class Control:
         return session
 
     async def meta(self, request):
-        return web.json_response({"setup_required": not self.has_admin(), "version": "0.1.1"})
+        return web.json_response({"setup_required": not self.has_admin(), "version": "0.1.2"})
 
     async def setup(self, request):
         self.web_origin(request)
@@ -311,8 +327,9 @@ class Control:
                          (digest(token), user["id"], csrf, now() + ADMIN_SECONDS))
         self.audit("admin_login", request, actor=user["id"])
         response = web.json_response({"username": user["username"], "csrf": csrf})
-        response.set_cookie("control_session", token, max_age=ADMIN_SECONDS,
-                            httponly=True, secure=self.secure, samesite="Strict", path="/")
+        response.set_cookie(self.admin_cookie_name, token, max_age=ADMIN_SECONDS,
+                            httponly=True, secure=self.secure, samesite="Strict",
+                            path=self.admin_cookie_path)
         return response
 
     async def admin_session(self, request):
@@ -323,7 +340,7 @@ class Control:
         session = self.admin(request, True)
         self.store.write("DELETE FROM admin_sessions WHERE hash=?", (session["hash"],))
         response = web.json_response({"ok": True})
-        response.del_cookie("control_session", path="/")
+        response.del_cookie(self.admin_cookie_name, path=self.admin_cookie_path)
         return response
 
     async def overview(self, request):
@@ -578,8 +595,11 @@ async def security(request, handler):
 
 
 def make_app(data_dir, public_url, id_upstream="ws://127.0.0.1:21118",
-             relay_upstream="ws://127.0.0.1:21119"):
-    control = Control(data_dir, public_url, id_upstream, relay_upstream)
+             relay_upstream="ws://127.0.0.1:21119", *,
+             admin_origin=None, admin_cookie_path="/", admin_cookie_name="control_session"):
+    control = Control(data_dir, public_url, id_upstream, relay_upstream,
+                      admin_origin=admin_origin, admin_cookie_path=admin_cookie_path,
+                      admin_cookie_name=admin_cookie_name)
     app = web.Application(middlewares=[security], client_max_size=16384)
     app["control"] = control
     app.cleanup_ctx.append(control.lifecycle)

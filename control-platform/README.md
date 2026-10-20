@@ -6,7 +6,7 @@ separate administrator cookie. There is no public account registration.
 
 ## Status and boundaries
 
-- Seven local backend tests pass; browser login, device listing and approval have been
+- Ten local tests pass (eight API/auth tests and two certificate-proxy tests); browser login, device listing and approval have been
   exercised using temporary test data.
 - The gateway has been tested against a binary WebSocket test backend. Native
   RustDesk client integration and end-to-end remote desktop tests remain pending.
@@ -86,7 +86,32 @@ Caddy advertises HTTP/1.1 and HTTP/2 only so it does not bind UDP 443, which is
 already used by AWG. The trusted proxy overwrites `X-Real-IP`; the application
 trusts that header only from loopback. Neither component logs bearer credentials.
 
-## Certificate-only egress proposal
+## Certificate transport
+
+The current candidate uses the user's domestic Mac, without binding any domain
+to ali. Read-only checks on that Mac confirmed access to ali TCP 22 and both ACME
+directories through its existing Surge HTTP proxy at `127.0.0.1:6152`.
+No new Mac/ali authorization has yet been installed.
+
+Prepared scripts:
+
+- `mac_cert_proxy.py`: loopback `18488`, only HTTP CONNECT to the two exact ACME
+  hostnames on TCP 443; always through Surge, no direct fallback or TLS interception.
+- `install_mac_link.py`: separate ordinary-user LaunchAgents and a dedicated
+  SSH identity. Preparation and activation are explicit separate steps.
+- `authorize_mac_link.py`: dry-run by default; adds the key-only account
+  `rd-mac-webcert` only with `--apply`. No sudo/shell/commands/SFTP. `PermitOpen`
+  limits local forwarding to ali `127.0.0.1:8088`; `PermitListen` limits reverse
+  forwarding to ali `127.0.0.1:18489`. The key itself carries the same restrictions.
+
+The proposed combined link carries the management page via Mac loopback `18490`
+and certificate egress via ali loopback `18489`. It carries no remote-desktop
+data. Caddy's `HTTPS_PROXY` is `http://127.0.0.1:18489`. Its certificate private key
+stays on ali. A Mac reboot still requires the ordinary user session and Surge;
+pre-login availability has not been verified. Actual issuance, reconnection and
+renewal acceptance remain required, including the CA's inbound challenge.
+
+### Earlier overseas attempt
 
 The directly verified exit is `194.156.163.226`. Its Ed25519 host fingerprint is:
 `SHA256:E8ZPynQ4ZbYLvlY9Jz/+LHKHzj5WzbtmIQ9seRDnbRs`.
@@ -104,9 +129,34 @@ TCP 443 accepts only this account, and its firewall allows only `8.138.230.183`.
 Original SSH 22 and the existing service on 18786 were preserved. Both directions
 between these two servers timed out; the source's cloud firewall was inspected
 and no relevant block was found. The ali-side tunnel has therefore not been
-activated. Do not treat this route as a functioning renewal path. Caddy is configured to use
-`HTTPS_PROXY=socks5h://127.0.0.1:1080`; backend requests use loopback directly.
+activated. Do not treat this route as a functioning renewal path. The earlier
+deployment used `HTTPS_PROXY=socks5h://127.0.0.1:1080`; the new draft replaces it
+with the Mac route only after approval. Backend requests use loopback directly.
 The HTTPS certificate private key stays on ali gz.
+
+## Existing Seqdao management entrance
+
+The user chose to preserve RustDesk's independent login service while presenting
+its management page through the existing Seqdao portal. The backend draft 0.1.2
+accepts `--admin-origin`, `--admin-cookie-path`, and `--admin-cookie-name` for this purpose. They do not
+change the native client's public URL, JWT issuer or DPoP destination.
+
+For `/apps/rustdesk/`, a private gateway strips that prefix before proxying.
+HTML resources and API calls now resolve relative to the page's own prefix.
+The external prefix must end with `/`; redirect the slashless URL in the portal.
+The administrator cookie must use the distinct name `rdcontrol_admin`, be scoped
+to `/apps/rustdesk/`, and use the exact portal HTTPS origin. A real browser test
+with an existing unrelated root-path cookie verified login, reload and approval.
+Keep the page outside an iframe; its frame protections
+remain enabled. The portal gateway must enforce existing portal authorization,
+proxy only the management allowlist and `rdcontrol_admin` cookie, and strip all Seqdao credentials/identity
+headers. RustDesk still requires its own administrator cookie and CSRF token.
+
+The remote helper is preparing the portal-only patch separately. It has not
+been installed. Do not replace the existing Seqdao deployment directory.
+The draft public Caddy entrance allows only the six client authentication/WSS
+paths; administrative pages and APIs are reachable through the private portal
+channel. Caddy's separate administrative configuration API is disabled.
 
 ## Audit semantics
 

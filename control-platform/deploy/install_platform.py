@@ -143,7 +143,7 @@ def main():
         print("HTTPS and RustDesk were NOT activated. Configure and verify certificate egress first.")
         return
     # Prove the restricted tunnel works before changing firewall or enabling public HTTPS.
-    run("curl", "-fsS", "--proxy", "socks5h://127.0.0.1:1080", "--max-time", "15",
+    run("curl", "-fsS", "--proxy", "http://127.0.0.1:18489", "--max-time", "15",
         "https://acme-v02.api.letsencrypt.org/directory")
     run(str(release / "deploy/caddy"), "validate", "--config", str(release / "deploy/Caddyfile"),
         "--adapter", "caddyfile")

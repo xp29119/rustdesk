@@ -109,6 +109,45 @@ async def test_pending_device_can_revoke_its_own_session(env):
     assert result.status == 401
 
 
+async def test_separate_portal_origin_and_cookie_path_do_not_change_device_proof_origin(
+        aiohttp_client, tmp_path):
+    public_origin = "https://8.138.230.183"
+    portal_origin = "https://portal.example.test:18443"
+    app = make_app(tmp_path, public_origin, admin_origin=portal_origin,
+                   admin_cookie_path="/rustdesk/", admin_cookie_name="rdcontrol_admin")
+    client = await aiohttp_client(app)
+    setup_body = {"token": (tmp_path / "bootstrap-token.txt").read_text(),
+                  "username": "operator", "password": PASSWORD}
+    denied = await client.post("/api/setup", headers={"Origin": public_origin}, json=setup_body)
+    assert denied.status == 403
+    setup = await client.post("/api/setup", headers={"Origin": portal_origin}, json=setup_body)
+    assert setup.status == 201
+    login_body = {"username": "operator", "password": PASSWORD}
+    denied = await client.post("/api/admin/login", headers={"Origin": public_origin}, json=login_body)
+    assert denied.status == 403
+    login = await client.post("/api/admin/login", headers={"Origin": portal_origin}, json=login_body)
+    assert login.status == 200
+    cookie = login.cookies["rdcontrol_admin"]
+    assert cookie["path"] == "/rustdesk/"
+    assert cookie["secure"] and cookie["httponly"] and cookie["samesite"] == "Strict"
+    key = Ed25519PrivateKey.generate()
+    body = {**login_body, "device_name": "Test client", "platform": "test", "public_key": public(key)}
+    denied = await client.post("/api/auth/login", headers={
+        "DPoP": proof(key, "POST", "/api/auth/login", htu=portal_origin + "/api/auth/login")},
+        json=body)
+    assert denied.status == 401
+    pending = await client.post("/api/auth/login", headers={
+        "DPoP": proof(key, "POST", "/api/auth/login", htu=public_origin + "/api/auth/login")},
+        json=body)
+    assert pending.status == 202
+    csrf = (await login.json())["csrf"]
+    logout = await client.post("/api/admin/logout", headers={
+        "Origin": portal_origin, "X-CSRF-Token": csrf,
+        "Cookie": "control_session=unrelated-existing-cookie; rdcontrol_admin=" + cookie.value}, json={})
+    assert logout.status == 200
+    assert logout.cookies["rdcontrol_admin"]["path"] == "/rustdesk/"
+
+
 async def test_approval_is_required_and_revocation_blocks_tokens(env):
     client, admin, _ = env
     key, pending = await enroll(env)
