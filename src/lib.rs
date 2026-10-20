@@ -44,6 +44,9 @@ mod clipboard;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub mod core_main;
 mod custom_server;
+mod managed_config;
+#[cfg(feature = "managed-client")]
+mod managed_login;
 mod lang;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod port_forward;

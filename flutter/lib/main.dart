@@ -24,6 +24,7 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'common.dart';
+import 'common/widgets/managed_login_gate.dart';
 import 'consts.dart';
 import 'mobile/pages/home_page.dart';
 import 'mobile/pages/server_page.dart';
@@ -501,11 +502,11 @@ class _AppState extends State<App> with WidgetsBindingObserver {
           theme: MyTheme.lightTheme,
           darkTheme: MyTheme.darkTheme,
           themeMode: MyTheme.currentThemeMode(),
-          home: isDesktop
+          home: ManagedLoginGate(child: isDesktop
               ? const DesktopTabPage()
               : isWeb
                   ? WebHomePage()
-                  : HomePage(),
+                  : HomePage()),
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,

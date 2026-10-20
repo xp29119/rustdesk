@@ -1018,6 +1018,9 @@ pub fn is_modifier(evt: &KeyEvent) -> bool {
 }
 
 pub fn check_software_update() {
+    if crate::managed_config::enabled() {
+        return;
+    }
     if is_custom_client() {
         return;
     }
@@ -1031,6 +1034,10 @@ pub fn check_software_update() {
 // Because the url is always `https://api.rustdesk.com/version/latest`.
 #[tokio::main(flavor = "current_thread")]
 pub async fn do_check_software_update() -> hbb_common::ResultType<()> {
+    if crate::managed_config::enabled() {
+        SOFTWARE_UPDATE_URL.lock().unwrap().clear();
+        return Ok(());
+    }
     let (request, url) =
         hbb_common::version_check_request(hbb_common::VER_TYPE_RUSTDESK_CLIENT.to_string());
     let proxy_conf = Config::get_socks();
@@ -2358,6 +2365,10 @@ pub fn rustdesk_interval(i: Interval) -> ThrottledInterval {
 }
 
 pub fn load_custom_client() {
+    if crate::managed_config::enabled() {
+        crate::managed_config::init();
+        return;
+    }
     #[cfg(debug_assertions)]
     if let Ok(data) = std::fs::read_to_string("./custom.txt") {
         read_custom_client(data.trim());

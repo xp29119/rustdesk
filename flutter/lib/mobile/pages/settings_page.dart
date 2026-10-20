@@ -629,7 +629,8 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
           gFFI.invokeMethod(AndroidChannel.kSetStartOnBootOpt, toValue);
         }));
 
-    if (!bind.isCustomClient()) {
+    if (!bind.isCustomClient() &&
+        bind.mainGetBuildinOption(key: kOptionDisableClientUpdates) != 'Y') {
       enhancementsTiles.add(
         SettingsTile.switchTile(
           initialValue: _checkUpdateOnStartup,

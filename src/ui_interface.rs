@@ -138,6 +138,9 @@ pub fn show_run_without_install() -> bool {
 
 #[inline]
 pub fn get_license() -> String {
+    if crate::managed_config::enabled() {
+        return String::new();
+    }
     #[cfg(windows)]
     if let Ok(lic) = crate::platform::windows::get_license_from_exe_name() {
         #[cfg(feature = "flutter")]

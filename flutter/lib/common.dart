@@ -4066,6 +4066,9 @@ void earlyAssert() {
 }
 
 void checkUpdate() {
+  if (bind.mainGetBuildinOption(key: kOptionDisableClientUpdates) == 'Y') {
+    return;
+  }
   if (!isWeb) {
     if (!bind.isCustomClient()) {
       platformFFI.registerEventHandler(

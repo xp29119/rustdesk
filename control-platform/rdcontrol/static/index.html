@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>控制中心</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <section id="auth" class="auth-shell">
+    <div class="auth-story">
+      <div class="brand"><span class="brand-mark">控</span> 控制中心</div>
+      <div><span class="eyebrow">PRIVATE ACCESS</span><h1>每一次连接，<br>都有明确的授权。</h1><p>统一管理账号、批准设备、查看访问记录。<br>从 RustDesk 开始，管理你的内部服务。</p></div>
+      <span class="story-footer">你的服务器 · 你的访问权限</span>
+    </div>
+    <div class="auth-panel">
+      <form id="login-form">
+        <span class="eyebrow">ADMIN CONSOLE</span>
+        <h2 id="auth-title">登录管理后台</h2>
+        <p id="auth-hint" class="muted">仅管理员可以访问此控制台。</p>
+        <label id="setup-code-label" hidden>首次初始化代码<input id="setup-code" autocomplete="off" spellcheck="false"></label>
+        <label>管理员账号<input id="username" required minlength="3" maxlength="40" autocomplete="username" placeholder="请输入账号"></label>
+        <label>密码<input id="password" required type="password" minlength="12" maxlength="256" autocomplete="current-password" placeholder="至少 12 个字符"></label>
+        <p id="login-error" class="error" role="alert"></p>
+        <button type="submit" id="login-button" class="primary wide">登录</button>
+        <p class="fine-print">没有管理员账号？首次配置需要服务器上的初始化代码。平台不开放公众注册。</p>
+      </form>
+    </div>
+  </section>
+  <div id="console" class="app" hidden>
+    <aside>
+      <div class="brand"><span class="brand-mark">控</span> 控制中心</div>
+      <span class="nav-caption">工作空间</span>
+      <nav aria-label="主导航">
+        <button data-page="overview" class="active"><span>◈</span>概览</button>
+        <button data-page="devices"><span>▣</span>设备审批 <b id="pending-nav"></b></button>
+        <button data-page="users"><span>◎</span>账号管理</button>
+        <button data-page="audit"><span>≡</span>活动记录</button>
+      </nav>
+      <span class="nav-caption">服务模块</span>
+      <nav><button data-page="rustdesk"><span>↗</span>RustDesk</button></nav>
+      <div class="sidebar-bottom"><span class="dot"></span> 私有管理平台<span class="version">v0.1</span></div>
+    </aside>
+    <main>
+      <header><div><div class="breadcrumb">控制中心 <span>/</span> <span id="breadcrumb-page">概览</span></div><h1 id="page-title">工作空间概览</h1></div><div class="header-actions"><span id="admin-name"></span><button id="refresh" class="secondary">刷新</button><button id="logout" class="quiet">退出</button></div></header>
+      <div id="notice" class="notice" role="status" hidden></div>
+      <section id="page-overview" class="page">
+        <div class="welcome"><div><span class="eyebrow">ACCESS OVERVIEW</span><h2>让访问权限始终清晰可见</h2><p>新设备由你批准；账号和设备的授权可以随时撤销。</p></div><span class="welcome-symbol">↗</span></div>
+        <div class="metrics">
+          <article><span>已启用账号</span><strong id="metric-users">—</strong><small>由管理员创建</small></article>
+          <article><span>等待审批</span><strong id="metric-pending">—</strong><small>审批前无法使用服务</small></article>
+          <article><span>已批准设备</span><strong id="metric-approved">—</strong><small>独立的设备凭证</small></article>
+          <article><span>当前通道</span><strong id="metric-transports">—</strong><small>信令与中继连接</small></article>
+        </div>
+        <div class="two-columns"><article class="card"><div class="card-heading"><h2>需要你处理</h2><button class="text-button" data-page="devices">查看设备 →</button></div><div id="overview-pending"></div></article><article class="card"><div class="card-heading"><h2>服务模块</h2><span class="badge neutral">1 个模块</span></div><div class="module"><span class="module-icon">↗</span><div><h3>RustDesk</h3><p>受保护的远程访问入口</p></div><button class="text-button" data-page="rustdesk">打开 →</button></div><p class="module-note">账号、设备审批与活动记录可供后续服务复用。</p></article></div>
+        <article class="card"><div class="card-heading"><h2>最近活动</h2><span id="updated-at" class="muted"></span></div><div id="recent-audit"></div></article>
+      </section>
+      <section id="page-devices" class="page" hidden><div class="section-intro"><p>首次登录的设备需要批准。撤销后，当前通道会在数秒内关闭，新连接将被拒绝。</p><select id="device-filter" aria-label="设备状态"><option value="all">全部设备</option><option value="pending">待审批</option><option value="approved">已批准</option><option value="revoked">已撤销</option></select></div><article class="card"><div id="device-table"></div></article></section>
+      <section id="page-users" class="page" hidden><div class="section-intro"><p>关闭公开注册。禁用账号会同时撤销该账号的登录会话。</p><button id="new-user" class="primary">＋ 创建账号</button></div><article class="card"><div id="user-table"></div></article></section>
+      <section id="page-audit" class="page" hidden><p class="section-intro">展示最近 100 条服务端活动。不记录密码、登录凭证或远程画面。</p><article class="card"><div id="audit-table"></div></article></section>
+      <section id="page-rustdesk" class="page" hidden><div class="info-panel"><strong>这里展示的是服务端通道记录</strong><p>信令通道用于设备登记与协调；中继通道承载加密数据。通道建立不代表远控认证成功。完整远控会话结果将在客户端接入后单独展示。</p></div><article class="card"><div class="card-heading"><h2>连接通道</h2><span class="badge neutral">服务端观测</span></div><div id="connection-table"></div></article></section>
+      <footer>刷新于 <span id="footer-time">—</span><span>权限由服务器验证</span></footer>
+    </main>
+  </div>
+  <dialog id="user-dialog"><form id="user-form"><div class="card-heading"><h2>创建内部账号</h2><button type="button" id="close-dialog" class="quiet" aria-label="关闭">×</button></div><p class="muted">新账号登录后，设备仍需单独审批。</p><label>账号<input name="username" required pattern="[A-Za-z0-9_.-]{3,40}" autocomplete="off" placeholder="3–40 位字母、数字、点、横线"></label><label>初始密码<input name="password" required type="password" minlength="12" maxlength="256" autocomplete="new-password" placeholder="至少 12 个字符"></label><p id="user-error" class="error" role="alert"></p><button class="primary wide" type="submit">创建账号</button></form></dialog>
+  <dialog id="confirm-dialog"><form method="dialog"><h2>确认操作</h2><p id="confirm-message"></p><div class="header-actions"><button value="cancel" class="secondary">取消</button><button value="confirm" class="primary">确认</button></div></form></dialog>
+</body>
+</html>

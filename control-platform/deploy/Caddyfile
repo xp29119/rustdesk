@@ -1,0 +1,18 @@
+{
+	admin 127.0.0.1:2019
+	servers {
+		protocols h1 h2
+	}
+}
+
+https://8.138.230.183 {
+	tls {
+		issuer acme {
+			dir https://acme-v02.api.letsencrypt.org/directory
+			profile shortlived
+		}
+	}
+	reverse_proxy 127.0.0.1:8088 {
+		header_up X-Real-IP {remote_host}
+	}
+}

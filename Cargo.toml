@@ -26,7 +26,8 @@ use_samplerate = ["samplerate", "libsamplerate-sys"]
 use_rubato = ["rubato"]
 use_dasp = ["dasp"]
 flutter = ["flutter_rust_bridge"]
-default = ["use_dasp"]
+default = ["use_dasp", "managed-client"]
+managed-client = ["dep:managed_auth"]
 hwcodec = ["scrap/hwcodec"]
 vram = ["scrap/vram"]
 mediacodec = ["scrap/mediacodec"]
@@ -50,6 +51,7 @@ screencapturekit = ["cpal/screencapturekit"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+managed_auth = { path = "libs/managed_auth", optional = true }
 async-trait = "0.1"
 scrap = { path = "libs/scrap", features = ["wayland"] }
 hbb_common = { path = "libs/hbb_common", features = ["webrtc"] }
@@ -213,7 +215,7 @@ android-wakelock = { git = "https://github.com/rustdesk-org/android-wakelock" }
 
 [workspace]
 members = ["libs/scrap", "libs/hbb_common", "libs/base", "libs/enigo", "libs/clipboard", "libs/virtual_display", "libs/virtual_display/dylib", "libs/portable", "libs/remote_printer"]
-exclude = ["vdi/host"]
+exclude = ["vdi/host", "libs/managed_auth"]
 
 # Patch libxdo-sys to use a stub implementation that doesn't require libxdo
 # This allows building and running on systems without libxdo installed (e.g., Wayland-only)

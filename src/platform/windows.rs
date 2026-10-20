@@ -734,6 +734,12 @@ async fn run_service(_arguments: Vec<OsString>) -> ResultType<()> {
                     }
                     if let Ok(Some(data)) = stream.next_timeout(1000).await {
                         match data {
+                            #[cfg(feature = "managed-client")]
+                            data @ ipc::Data::ManagedAuth(_) => {
+                                tokio::spawn(async move {
+                                    ipc::managed::handle(&data, &mut stream).await;
+                                });
+                            }
                             ipc::Data::Close => {
                                 log::info!("close received");
                                 break;
@@ -2101,6 +2107,14 @@ pub fn prepare_custom_client_update() -> ResultType<bool> {
 }
 
 pub fn get_license_from_exe_name() -> ResultType<CustomServer> {
+    if crate::managed_config::enabled() {
+        return Ok(CustomServer {
+            host: crate::managed_config::SERVER.into(),
+            relay: crate::managed_config::RELAY.into(),
+            key: crate::managed_config::PUBLIC_KEY.into(),
+            api: String::new(),
+        });
+    }
     let mut exe = std::env::current_exe()?.to_str().unwrap_or("").to_owned();
     // if defined portable appname entry, replace original executable name with it.
     if let Ok(portable_exe) = std::env::var(PORTABLE_APPNAME_RUNTIME_ENV_KEY) {

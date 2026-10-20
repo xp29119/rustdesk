@@ -13,5 +13,8 @@ class MainApplication : Application() {
         super.onCreate()
         Log.d(TAG, "App start")
         FFI.onAppStart(applicationContext)
+        if (FFI.isManagedClient()) {
+            FFI.initManagedAuth(ManagedCredentialStore(applicationContext))
+        }
     }
 }

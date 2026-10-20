@@ -1,0 +1,23 @@
+[Unit]
+Description=Private device access control
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=rdcontrol
+Group=rdcontrol
+WorkingDirectory=/opt/rdcontrol/current
+Environment=PYTHONPATH=/opt/rdcontrol/current:/opt/rdcontrol/current/vendor
+ExecStart=/usr/bin/python3 -m rdcontrol --data-dir /var/lib/rdcontrol --public-url https://8.138.230.183 --port 8088
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/rdcontrol
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

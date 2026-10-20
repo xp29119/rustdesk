@@ -51,6 +51,7 @@ fn initialize(app_dir: &str, custom_client_config: &str) {
     } else {
         crate::read_custom_client(custom_client_config);
     }
+    crate::managed_config::init();
     #[cfg(target_os = "android")]
     {
         // flexi_logger can't work when android_logger initialized.
@@ -978,6 +979,28 @@ pub fn main_get_sound_inputs() -> Vec<String> {
 
 pub fn main_get_login_device_info() -> SyncReturn<String> {
     SyncReturn(get_login_device_info_json())
+}
+
+pub async fn main_managed_auth(command: String) -> String {
+    #[cfg(feature = "managed-client")]
+    {
+        let result = async {
+            if command.len() > 8192 {
+                hbb_common::bail!("Invalid managed login request");
+            }
+            let command: managed_auth::Command = serde_json::from_str(&command)?;
+            if matches!(command, managed_auth::Command::Headers { .. }) {
+                hbb_common::bail!("Transport credentials are unavailable to the UI");
+            }
+            crate::managed_login::execute(command).await
+        }.await;
+        return match result {
+            Ok(response) => serde_json::json!({"ok": true, "result": response}).to_string(),
+            Err(error) => serde_json::json!({"ok": false, "error": error.to_string()}).to_string(),
+        };
+    }
+    #[cfg(not(feature = "managed-client"))]
+    r#"{"ok":false,"error":"Managed login is disabled"}"#.to_owned()
 }
 
 pub fn main_change_id(new_id: String) {
@@ -2948,6 +2971,11 @@ pub mod server_side {
     };
 
     use crate::start_server;
+
+    #[no_mangle]
+    pub extern "system" fn Java_ffi_FFI_isManagedClient(_env: JNIEnv, _class: JClass) -> jboolean {
+        crate::managed_config::enabled() as jboolean
+    }
 
     #[no_mangle]
     pub unsafe extern "system" fn Java_ffi_FFI_startServer(

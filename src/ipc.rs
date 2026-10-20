@@ -100,6 +100,9 @@ const IPC_TOKEN_RANDOM_BYTES: usize = IPC_TOKEN_LEN / 2;
 #[cfg(target_os = "windows")]
 const _: () = assert!(IPC_TOKEN_LEN % 2 == 0);
 pub static EXIT_RECV_CLOSE: AtomicBool = AtomicBool::new(true);
+#[cfg(feature = "managed-client")]
+#[path = "ipc/managed.rs"]
+pub(crate) mod managed;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 thread_local! {
@@ -321,6 +324,10 @@ pub enum SwitchSidesUuidAction {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "t", content = "c")]
 pub enum Data {
+    #[cfg(feature = "managed-client")]
+    ManagedAuth(managed_auth::Command),
+    #[cfg(feature = "managed-client")]
+    ManagedAuthResponse(Result<managed_auth::Response, String>),
     Login {
         id: i32,
         is_file_transfer: bool,
@@ -634,6 +641,10 @@ pub async fn start(postfix: &str) -> ResultType<()> {
                                     // uinput IPC paths while still minimizing exposed message surface here.
                                     #[cfg(any(target_os = "linux", target_os = "macos"))]
                                     if postfix == crate::POSTFIX_SERVICE {
+                                        #[cfg(feature = "managed-client")]
+                                        if managed::handle(&data, &mut stream).await {
+                                            continue;
+                                        }
                                         if matches!(&data, Data::SyncConfig(_)) {
                                             handle(data, &mut stream).await;
                                         } else {
