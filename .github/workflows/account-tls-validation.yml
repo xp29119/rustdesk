@@ -31,8 +31,7 @@ jobs:
       - name: Compile the production helper in its small validation harness
         run: |
           mkdir -p validation-results
-          cp Cargo.lock validation/tls/harness/Cargo.lock
-          RUSTDESK_API_TLS_SOURCE="$PWD/src/api_tls.rs" cargo build --manifest-path validation/tls/harness/Cargo.toml --release
+          RUSTDESK_API_TLS_SOURCE="$PWD/src/api_tls.rs" cargo build --locked --manifest-path validation/tls/harness/Cargo.toml --release
           cp validation/tls/harness/Cargo.lock validation-results/Cargo.lock
       - name: Verify real TLS with temporary loopback fixtures
         run: |

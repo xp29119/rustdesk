@@ -30,7 +30,10 @@ class SettingsPage extends StatefulWidget implements PageShape {
   final icon = Icon(Icons.settings);
 
   @override
-  final appBarActions = bind.isDisableSettings() ? [] : [ScanButton()];
+  final appBarActions = bind.isDisableSettings() ||
+          bind.mainGetBuildinOption(key: kOptionHideServerSetting) == 'Y'
+      ? []
+      : [ScanButton()];
 
   @override
   State<SettingsPage> createState() => _SettingsState();
@@ -629,7 +632,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
           gFFI.invokeMethod(AndroidChannel.kSetStartOnBootOpt, toValue);
         }));
 
-    if (!bind.isCustomClient()) {
+    if (!bind.isCustomClient() && !isOptionFixed(kOptionEnableCheckUpdate)) {
       enhancementsTiles.add(
         SettingsTile.switchTile(
           initialValue: _checkUpdateOnStartup,

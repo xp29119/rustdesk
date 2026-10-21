@@ -6,6 +6,7 @@ import 'package:flutter_hbb/common/widgets/toolbar.dart';
 import 'package:get/get.dart';
 
 import '../../common.dart';
+import '../../consts.dart';
 import '../../models/platform_model.dart';
 
 void _showSuccess() {
@@ -69,6 +70,7 @@ void showServerSettingsWithValue(
     ServerConfig serverConfig,
     OverlayDialogManager dialogManager,
     void Function(VoidCallback)? upSetState) async {
+  if (bind.mainGetBuildinOption(key: kOptionHideServerSetting) == 'Y') return;
   var isInProgress = false;
   final idCtrl = TextEditingController(text: serverConfig.idServer);
   final relayCtrl = TextEditingController(text: serverConfig.relayServer);

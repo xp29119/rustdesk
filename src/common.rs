@@ -21,6 +21,7 @@ use hbb_common::{
     futures::future::join_all,
     futures_util::future::poll_fn,
     get_version_number, log,
+    proxy::{Proxy, ProxyScheme},
     protobuf::{Enum, Message as _},
     rendezvous_proto::*,
     socket_client,
@@ -1031,6 +1032,10 @@ pub fn check_software_update() {
 // Because the url is always `https://api.rustdesk.com/version/latest`.
 #[tokio::main(flavor = "current_thread")]
 pub async fn do_check_software_update() -> hbb_common::ResultType<()> {
+    if crate::deployment_profile::MANAGED_UPDATES {
+        *SOFTWARE_UPDATE_URL.lock().unwrap() = String::new();
+        return Ok(());
+    }
     let (request, url) =
         hbb_common::version_check_request(hbb_common::VER_TYPE_RUSTDESK_CLIENT.to_string());
     let proxy_conf = Config::get_socks();
@@ -1531,6 +1536,11 @@ where
 /// - 4xx responses are returned as-is (server is reachable, business logic error).
 /// - If fallback also fails, returns the original HTTP result (text or error).
 pub async fn post_request(url: String, body: String, header: &str) -> ResultType<String> {
+    if is_account_api_target(&url)? {
+        let response =
+            account_api_request(&url, "POST", Some(&body), parse_simple_header(header)).await?;
+        return Ok(response.text().await?);
+    }
     with_tcp_proxy_fallback(
         &url,
         "POST",
@@ -1565,6 +1575,11 @@ pub async fn post_request_with_status(
     body: String,
     header: &str,
 ) -> ResultType<(u16, String)> {
+    if is_account_api_target(&url)? {
+        let response =
+            account_api_request(&url, "POST", Some(&body), parse_simple_header(header)).await?;
+        return Ok((response.status().as_u16(), response.text().await?));
+    }
     if should_use_raw_tcp_for_api(&url) {
         return post_request_via_tcp_proxy_status(&url, &body, header).await;
     }
@@ -1856,6 +1871,16 @@ pub async fn http_request_sync(
     body: Option<String>,
     header: String,
 ) -> ResultType<String> {
+    if is_account_api_target(&url)? {
+        let response = account_api_request(
+            &url,
+            &method,
+            body.as_deref(),
+            parse_json_header_entries(&header)?,
+        )
+        .await?;
+        return account_api_response_json(response).await;
+    }
     with_tcp_proxy_fallback(
         &url,
         &method,
@@ -1863,6 +1888,78 @@ pub async fn http_request_sync(
         http_request_via_tcp_proxy(&url, &method, body.as_deref(), &header),
     )
     .await
+}
+
+fn is_account_api_target(url: &str) -> ResultType<bool> {
+    crate::api_tls::classify_target(crate::deployment_profile::API_SERVER, url)
+        .map_err(|error| anyhow!(error.to_string()))
+}
+
+async fn account_api_request(
+    url: &str,
+    method: &str,
+    body: Option<&str>,
+    headers: Vec<HeaderEntry>,
+) -> ResultType<reqwest::Response> {
+    let proxy = if let Some(conf) = Config::get_socks() {
+        let parsed = Proxy::from_conf(&conf, None)?;
+        let url = match &parsed.intercept {
+            ProxyScheme::Http { host, .. } => format!("http://{}", host),
+            ProxyScheme::Socks5 { addr, .. } => format!("socks5://{}", addr),
+            ProxyScheme::Https { .. } => bail!(
+                "HTTPS proxies are unsupported for the account API private trust store"
+            ),
+        };
+        let (username, password) = parsed
+            .intercept
+            .maybe_auth()
+            .map(|auth| (auth.username().to_owned(), auth.password().to_owned()))
+            .unwrap_or_default();
+        Some(crate::api_tls::ProxySettings {
+            url,
+            username,
+            password,
+        })
+    } else {
+        None
+    };
+    let client = crate::api_tls::ApiClient::new(
+        crate::deployment_profile::API_SERVER,
+        crate::deployment_profile::API_CA_PEM,
+        proxy.as_ref(),
+    )
+    .map_err(|error| anyhow!(error.to_string()))?;
+    let method = match method.to_ascii_lowercase().as_str() {
+        "get" => reqwest::Method::GET,
+        "post" => reqwest::Method::POST,
+        "put" => reqwest::Method::PUT,
+        "delete" => reqwest::Method::DELETE,
+        _ => bail!("The HTTP request method is not supported!"),
+    };
+    client
+        .request(
+            url,
+            method,
+            headers
+                .into_iter()
+                .map(|entry| (entry.name, entry.value))
+                .collect(),
+            body,
+        )
+        .await
+        .map_err(|error| anyhow!(error.to_string()))
+}
+
+async fn account_api_response_json(response: reqwest::Response) -> ResultType<String> {
+    let mut headers = Map::new();
+    for (name, value) in response.headers() {
+        headers.insert(name.to_string(), json!(value.to_str().unwrap_or("")));
+    }
+    let status = response.status().as_u16();
+    let body = response.text().await?;
+    Ok(serde_json::to_string(&json!({
+        "status_code": status, "headers": headers, "body": body,
+    }))?)
 }
 
 /// General HTTP request via TCP proxy. Header is a JSON string (used by http_request_sync).
