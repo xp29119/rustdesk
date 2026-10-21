@@ -45,6 +45,7 @@ mod clipboard;
 pub mod core_main;
 mod custom_server;
 mod deployment_profile;
+pub use deployment_profile::apply as apply_deployment_profile;
 mod api_tls;
 mod lang;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]

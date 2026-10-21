@@ -7,6 +7,15 @@ name: Internal clients v1 (Mac arm64, Windows x64, Android arm64)
     paths:
     - res/deployment-profile.json
     - certs/account-ca.crt
+    - .github/workflows/internal-clients.yml
+    - .github/scripts/load-client-profile.py
+    - .github/scripts/sign-macos-internal-app.sh
+    - .gitmodules
+    - Cargo.toml
+    - Cargo.lock
+    - src/**
+    - libs/**
+    - flutter/**
 permissions:
   contents: read
 concurrency:

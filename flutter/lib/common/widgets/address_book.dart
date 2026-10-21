@@ -422,6 +422,9 @@ class _AddressBookState extends State<AddressBook> {
 
   void _showMenu(RelativeRect pos) {
     final canWrite = gFFI.abModel.current.canWrite();
+    final showWebConsole = !gFFI.abModel.legacyMode.value &&
+        canWrite &&
+        bind.mainGetBuildinOption(key: 'hide-web-console') != 'Y';
     final items = [
       if (canWrite) getEntry(translate("Add ID"), addIdToCurrentAb),
       if (canWrite) getEntry(translate("Add Tag"), abAddTag),
@@ -430,9 +433,9 @@ class _AddressBookState extends State<AddressBook> {
         sortMenuItem(), // It's already sorted after pulling down
       if (canWrite) syncMenuItem(),
       filterMenuItem(),
-      if (!gFFI.abModel.legacyMode.value && canWrite)
+      if (showWebConsole)
         MenuEntryDivider<String>(),
-      if (!gFFI.abModel.legacyMode.value && canWrite)
+      if (showWebConsole)
         getEntry(translate("ab_web_console_tip"), () async {
           final url = await bind.mainGetApiServer();
           if (await canLaunchUrlString(url)) {

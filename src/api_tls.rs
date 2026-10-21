@@ -40,14 +40,15 @@ fn parse_base(value: &str) -> ApiResult<Url> {
 /// fall through to its HTTP or raw TCP fallback paths.
 pub(crate) fn classify_target(api_base: &str, target: &str) -> ApiResult<bool> {
     let base = parse_base(api_base)?;
+    let parsed = Url::parse(target)?;
+    if base.host() != parsed.host() {
+        return Ok(false);
+    }
     let target = parse_target(target)?;
     if base.origin() == target.origin() {
         return Ok(true);
     }
-    if base.host() == target.host() {
-        return Err("Account API scheme or port does not match the configured origin".into());
-    }
-    Ok(false)
+    Err("Account API scheme or port does not match the configured origin".into())
 }
 
 impl ApiClient {

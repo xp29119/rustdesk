@@ -310,6 +310,32 @@ def integration(binary, source, generated):
     for kind in ("http", "port", "host"):
         test("different_" + kind + "_does_not_receive_private_trust", lambda kind=kind: origin_case(kind))
 
+    def classification_preserves_other_hosts():
+        # Classify mode returns before constructing ApiClient or sending a request.
+        # These four cases require no listener and never contact the .invalid host.
+        base = "https://127.0.0.1:443"
+        scenarios = (
+            ("other_host_userinfo", "https://synthetic-user@stock.example.invalid/path", False),
+            ("other_host_fragment", "https://stock.example.invalid/path#section", False),
+            ("api_host_userinfo", "https://synthetic-user@127.0.0.1:443/api/login", True),
+            ("api_host_fragment", "https://127.0.0.1:443/api/login#section", True),
+        )
+        observed = []
+        for name, target, must_reject in scenarios:
+            result = call_helper(binary, expected_hash, ca, base, target, mode="classify")
+            if must_reject:
+                require(result.get("outcome") == "error" and result.get("phase") == "classify",
+                        name + " must retain strict account URL rejection")
+            else:
+                require(result.get("outcome") == "classified" and result.get("matched") is False,
+                        name + " must remain outside account TLS classification")
+            observed.append({"scenario": name, "outcome": result["outcome"],
+                             "expected": "error" if must_reject else "false"})
+        return {"mode": "classify", "listeners_started": False, "scenarios": observed}
+
+    test("classification_preserves_stock_urls_and_rejects_account_variants",
+         classification_preserves_other_hosts)
+
     def redirect():
         with ExitStack() as stack:
             target = stack.enter_context(ObservedServer())

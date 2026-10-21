@@ -35,6 +35,7 @@ pub fn apply() {
         .insert(keys::OPTION_ENABLE_FLUTTER_HTTP_ON_RUST.into(), "Y".into());
     config::BUILTIN_SETTINGS.write().unwrap().extend([
         (keys::OPTION_HIDE_SERVER_SETTINGS.into(), "Y".into()),
+        ("hide-web-console".into(), "Y".into()),
         (keys::OPTION_ALLOW_DEEP_LINK_SERVER_SETTINGS.into(), "N".into()),
         (keys::OPTION_ALLOW_HTTPS_21114.into(), "Y".into()),
     ]);
