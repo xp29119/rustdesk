@@ -1,0 +1,7 @@
+{
+  "id_server": "8.138.230.183:21116",
+  "relay_server": "8.138.230.183:21117",
+  "api_server": "https://8.138.230.183",
+  "server_public_key": "qCRzeSq8oWC86sCeNAnJdLujx381mVtOfvP5g8nE0M8=",
+  "ca_pem": "certs/account-ca.crt"
+}
