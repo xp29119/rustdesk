@@ -10,6 +10,8 @@ import jwt
 import pytest
 
 from rdcontrol.app import make_app, b64url
+from rdcontrol import registration
+from rdcontrol.rendezvous_pb2 import RendezvousMessage
 
 ORIGIN = "http://127.0.0.1:8765"
 PASSWORD = "A-long-test-password-2026"
@@ -250,6 +252,73 @@ async def test_gateway_rejects_anonymous_and_closes_revoked_stream(env):
     assert len(records)==1 and records[0]["kind"]=="relay"
     assert records[0]["ended"] is not None
     assert records[0]["bytes_up"]==len(b"encrypted-test-payload")
+
+
+async def test_oss_registration_stays_online_and_revocation_stops_its_heartbeat(env, monkeypatch):
+    client, admin, _ = env
+    heartbeats = []
+    endpoints = set()
+
+    class HbbsRegistration(asyncio.DatagramProtocol):
+        def connection_made(self, transport):
+            self.transport = transport
+
+        def datagram_received(self, data, address):
+            message = RendezvousMessage.FromString(data)
+            response = RendezvousMessage()
+            if message.WhichOneof("union") == "register_pk":
+                endpoints.add(address)
+                response.register_pk_response.keep_alive = 20
+            elif message.WhichOneof("union") == "register_peer":
+                heartbeats.append(message.register_peer.id)
+                response.register_peer_response.SetInParent()
+            self.transport.sendto(response.SerializeToString(), address)
+
+    transport, backend = await asyncio.get_running_loop().create_datagram_endpoint(
+        HbbsRegistration, local_addr=("127.0.0.1", 0))
+    monkeypatch.setattr(registration, "REGISTRATION_ADDRESS", transport.get_extra_info("sockname"))
+    monkeypatch.setattr(registration, "HEARTBEAT_SECONDS", 0.05)
+    socket = None
+    try:
+        with pytest.raises(WSServerHandshakeError) as denied:
+            await client.ws_connect("/ws/id")
+        assert denied.value.status == 401
+        key, pending = await enroll(env)
+        token = (await approve(env, key, pending))["access_token"]
+        socket = await client.ws_connect("/ws/id", headers=headers(key, token, path="/ws/id"))
+        request = RendezvousMessage()
+        request.register_pk.id = "123456789"
+        request.register_pk.uuid = b"unique-desktop"
+        request.register_pk.pk = b"p" * 32
+        await socket.send_bytes(request.SerializeToString())
+        reply = RendezvousMessage.FromString((await socket.receive(timeout=2)).data)
+        assert reply.WhichOneof("union") == "register_pk_response"
+        assert reply.register_pk_response.result == 0
+        assert next(iter(endpoints))[0] == "127.0.0.1"
+        notice = RendezvousMessage()
+        notice.punch_hole.relay_server = "wss://8.138.230.183/ws/relay"
+        backend.transport.sendto(notice.SerializeToString(), next(iter(endpoints)))
+        for _ in range(10):
+            reply = RendezvousMessage.FromString((await socket.receive(timeout=2)).data)
+            if reply.WhichOneof("union") == "punch_hole":
+                break
+        assert reply.punch_hole.relay_server == "wss://8.138.230.183/ws/relay"
+        assert heartbeats
+        await client.post(f"/api/admin/devices/{pending['device_id']}/decision",
+                          headers=admin, json={"status": "revoked"})
+        async with asyncio.timeout(5):
+            while (await socket.receive()).type == WSMsgType.BINARY:
+                pass
+        assert socket.close_code == 1008
+        await asyncio.sleep(0.1)
+        count = len(heartbeats)
+        await asyncio.sleep(0.15)
+        assert len(heartbeats) == count
+    finally:
+        if socket:
+            await socket.close()
+        transport.close()
+
 
 
 async def test_setup_consumed_and_passwords_not_exposed(env):

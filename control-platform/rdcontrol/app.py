@@ -25,6 +25,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 import jwt
 
 from .store import Store
+from .registration import registration_id, relay_registration
 
 STATIC = Path(__file__).parent / "static"
 ACCESS_SECONDS = 300
@@ -296,7 +297,7 @@ class Control:
         return session
 
     async def meta(self, request):
-        return web.json_response({"setup_required": not self.has_admin(), "version": "0.1.3"})
+        return web.json_response({"setup_required": not self.has_admin(), "version": "0.1.4"})
 
     async def setup(self, request):
         self.web_origin(request)
@@ -499,12 +500,14 @@ class Control:
         require(count + self.pending_opens[session["device_id"]] < 12,
                 "Device connection limit reached", 429)
         cid = str(uuid.uuid4())
-        # Only trusted, sanitized IP headers go to the loopback RustDesk websocket listener.
+        # hbbs uses socket addresses to route controller replies. X-Real-IP makes it
+        # replace every connection from the same IP with IP:0, collapsing those routes.
+        upstream_headers = {} if kind == "id" else {"X-Real-IP": self.ip(request)}
         self.pending_opens[session["device_id"]] += 1
         upstream = None
         try:
             upstream = await self.http.ws_connect(
-                self.upstreams[kind], headers={"X-Real-IP": self.ip(request)},
+                self.upstreams[kind], headers=upstream_headers,
                 max_msg_size=64 * 1024 * 1024, heartbeat=25,
             )
             live = self.live_session(session["id"])
@@ -541,10 +544,26 @@ class Control:
                     await client.close(code=1003, message=b"Binary transport required")
                     break
 
-        tasks = [asyncio.create_task(pump(client, upstream, 0)),
-                 asyncio.create_task(pump(upstream, client, 1))]
+        tasks = []
         try:
+            if kind == "id":
+                first = await client.receive(timeout=8)
+                if first.type != WSMsgType.BINARY:
+                    return client
+                peer_id = registration_id(first.data)
+                if peer_id is not None:
+                    await upstream.close()
+                    await relay_registration(client, first.data, peer_id, counters)
+                    return client
+                counters[0] += len(first.data)
+                await upstream.send_bytes(first.data)
+            tasks = [asyncio.create_task(pump(client, upstream, 0)),
+                     asyncio.create_task(pump(upstream, client, 1))]
             await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        except (ClientError, OSError, asyncio.TimeoutError, ValueError):
+            self.audit("transport_unavailable", request,
+                       actor=session["user_id"], device=session["device_id"])
+            await client.close(code=1011, message=b"RustDesk transport unavailable")
         finally:
             for task in tasks:
                 task.cancel()

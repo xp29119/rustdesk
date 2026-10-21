@@ -38,7 +38,7 @@ def main():
         raise SystemExit("Apply as root on ali")
     with urllib.request.urlopen("http://127.0.0.1:8088/api/meta", timeout=3) as response:
         meta = json.load(response)
-    if meta["version"] not in ("0.1.2", "0.1.3"):
+    if meta["version"] not in ("0.1.2", "0.1.3", "0.1.4"):
         raise SystemExit("Install and verify a supported backend first")
     folder = Path("/etc/systemd/system/rdcontrol.service.d")
     folder.mkdir(mode=0o755, exist_ok=True)
