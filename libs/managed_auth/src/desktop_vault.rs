@@ -5,6 +5,37 @@ use anyhow::Result;
 /// Desktop UI processes must use IPC and must never read this vault directly.
 pub struct ServiceVault;
 
+/// Foreground login needs no administrator installation. Each OS user has a separate vault.
+pub struct UserVault;
+
+#[cfg(target_os = "macos")]
+impl Vault for UserVault {
+    fn load(&self) -> Result<Option<Vec<u8>>> {
+        use security_framework::os::macos::keychain::SecKeychain;
+        match SecKeychain::default()?.find_generic_password(SERVICE, ACCOUNT) {
+            Ok((password, _)) => Ok(Some(password.to_vec())),
+            Err(error) if error.code() == -25300 => Ok(None),
+            Err(error) => Err(error.into()),
+        }
+    }
+
+    fn save(&self, value: &[u8]) -> Result<()> {
+        use security_framework::os::macos::keychain::SecKeychain;
+        SecKeychain::default()?.set_generic_password(SERVICE, ACCOUNT, value)?;
+        Ok(())
+    }
+}
+
+#[cfg(target_os = "windows")]
+impl Vault for UserVault {
+    fn load(&self) -> Result<Option<Vec<u8>>> {
+        ServiceVault.load()
+    }
+    fn save(&self, value: &[u8]) -> Result<()> {
+        ServiceVault.save(value)
+    }
+}
+
 const SERVICE: &str = "org.rustdesk.internal.auth.v1";
 const ACCOUNT: &str = "8.138.230.183";
 
@@ -38,7 +69,7 @@ impl Vault for ServiceVault {
         };
         let target: Vec<u16> = format!("{SERVICE}/{ACCOUNT}\0").encode_utf16().collect();
         let mut credential = ptr::null_mut();
-        // Called as LocalSystem. Credentials belong to its logon identity, not the desktop user.
+        // Windows isolates credentials by logon identity, including LocalSystem versus the user.
         unsafe {
             if CredReadW(target.as_ptr(), CRED_TYPE_GENERIC, 0, &mut credential) == 0 {
                 let error = GetLastError();

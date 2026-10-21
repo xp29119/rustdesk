@@ -6,6 +6,7 @@ name: Internal clients (Windows, macOS, Android)
     branches: [codex/internal-client-1.5.0]
     paths:
     - .github/workflows/internal-clients.yml
+    - .github/scripts/sign-macos-app.sh
     - .gitmodules
     - Cargo.toml
     - Cargo.lock
@@ -115,7 +116,7 @@ jobs:
         cp ./flutter/macos/Runner/bridge_generated.h ./flutter/ios/Runner/bridge_generated.h
     - name: Analyze managed login screen
       working-directory: flutter
-      run: flutter analyze --no-pub lib/common/widgets/managed_login_gate.dart
+      run: flutter analyze --no-pub lib/common/widgets/managed_account.dart lib/models/managed_account_model.dart lib/common/widgets/login.dart
     - name: Upload Artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:

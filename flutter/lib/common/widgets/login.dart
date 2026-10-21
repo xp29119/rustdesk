@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common/hbbs/hbbs.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/user_model.dart';
+import 'package:flutter_hbb/models/managed_account_model.dart';
 import 'package:get/get.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -720,6 +721,7 @@ Future<bool?> _openLoginDialogOnce() async {
 }
 
 Future<bool?> _openLoginDialog() async {
+  if (managedAccount.enabled) return _openManagedAccountDialog();
   var username =
       TextEditingController(text: UserModel.getLocalUserInfo()?['name'] ?? '');
   var password = TextEditingController();
@@ -1000,6 +1002,159 @@ Future<bool?> _openLoginDialog() async {
   return res;
 }
 
+Future<bool> ensureManagedAccount() async {
+  if (!managedAccount.enabled) return true;
+  try {
+    await managedAccount.refresh();
+  } catch (_) {}
+  if (!managedAccount.approved) await loginDialog();
+  return managedAccount.approved;
+}
+
+Future<bool?> _openManagedAccountDialog() async {
+  managedAccount.start();
+  final username = TextEditingController(text: managedAccount.username.value);
+  final password = TextEditingController();
+  final focus = FocusNode()..requestFocus();
+  final curOP = ''.obs;
+  String? usernameMsg;
+  String? passwordMsg;
+  bool inProgress = false;
+  bool closed = false;
+  bool reauthenticate = false;
+  try {
+    return await gFFI.dialogManager.show<bool>((setState, close, context) {
+      void finish(bool value) {
+        closed = true;
+        close(value);
+      }
+
+      Future<void> submit() async {
+        if (inProgress || (managedAccount.signedIn && !reauthenticate)) return;
+        if (username.text.trim().isEmpty) {
+          setState(() => usernameMsg = translate('Username missed'));
+          return;
+        }
+        if (password.text.isEmpty) {
+          setState(() => passwordMsg = translate('Password missed'));
+          return;
+        }
+        setState(() {
+          inProgress = true;
+          usernameMsg = null;
+          passwordMsg = null;
+        });
+        curOP.value = 'rustdesk';
+        try {
+          await managedAccount.login(username.text, password.text);
+          if (!closed) {
+            if (managedAccount.approved) {
+              finish(true);
+            } else {
+              setState(() => reauthenticate = false);
+            }
+          }
+        } catch (e) {
+          if (!closed) setState(() => passwordMsg = e.toString());
+        } finally {
+          curOP.value = '';
+          if (!closed) {
+            password.clear();
+            setState(() => inProgress = false);
+          }
+        }
+      }
+
+      return CustomAlertDialog(
+        title:
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(translate(managedAccount.signedIn ? 'Account' : 'Login')),
+          IconButton(
+              tooltip: translate('Close'),
+              icon: const Icon(Icons.close),
+              onPressed: () => finish(false)),
+        ]),
+        contentBoxConstraints:
+            BoxConstraints(minWidth: isDesktop ? 400 : 0, maxWidth: 460),
+        content: Obx(() => managedAccount.signedIn && !reauthenticate
+            ? Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.account_circle_outlined, size: 40),
+                const SizedBox(height: 12),
+                Text(managedAccount.username.value,
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Text(managedAccount.statusText, textAlign: TextAlign.center),
+                if (managedAccount.phase.value == 'pending') ...[
+                  const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text('管理员批准后即可连接，之后会自动保持登录。',
+                          textAlign: TextAlign.center)),
+                  if (managedAccount.deviceId.value.length >= 8)
+                    Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: SelectableText(
+                            '设备识别码：${managedAccount.deviceId.value.substring(0, 8)}')),
+                ],
+                if (managedAccount.error.isNotEmpty)
+                  Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(managedAccount.error.value,
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.error))),
+                const SizedBox(height: 16),
+                Wrap(spacing: 8, children: [
+                  TextButton(
+                      onPressed: managedAccount.busy.value
+                          ? null
+                          : () async {
+                              try {
+                                await managedAccount.refresh();
+                              } catch (_) {}
+                            },
+                      child: Text(translate('Refresh'))),
+                  if (managedAccount.phase.value == 'background' ||
+                      managedAccount.error.isNotEmpty)
+                    TextButton(
+                        onPressed: () => setState(() => reauthenticate = true),
+                        child: const Text('重新登录')),
+                  TextButton(
+                      onPressed: () {
+                        finish(false);
+                        logOutConfirmDialog();
+                      },
+                      child: Text(translate('Logout'))),
+                  ElevatedButton(
+                      onPressed: () => finish(managedAccount.approved),
+                      child: Text(translate('OK'))),
+                ]),
+              ])
+            : Column(mainAxisSize: MainAxisSize.min, children: [
+                LoginWidgetUserPass(
+                    username: username,
+                    pass: password,
+                    usernameMsg: usernameMsg,
+                    passMsg: passwordMsg,
+                    isInProgress: inProgress,
+                    curOP: curOP,
+                    onLogin: submit,
+                    userFocusNode: focus),
+                const SizedBox(height: 14),
+                Text('使用管理员分配的账号。首次登录需要批准此设备。',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall),
+              ])),
+        onCancel: () => finish(false),
+        onSubmit: submit,
+      );
+    });
+  } finally {
+    closed = true;
+    username.dispose();
+    password.dispose();
+    focus.dispose();
+  }
+}
+
 Future<bool?> verificationCodeDialog(
     UserPayload? user, String? secret, bool isEmailVerification) async {
   var autoLogin = true;
@@ -1115,7 +1270,11 @@ void logOutConfirmDialog() {
   gFFI.dialogManager.show((setState, close, context) {
     submit() {
       close();
-      gFFI.userModel.logOut();
+      if (managedAccount.enabled) {
+        managedAccount.logout().catchError((_) {});
+      } else {
+        gFFI.userModel.logOut();
+      }
     }
 
     return CustomAlertDialog(

@@ -263,3 +263,27 @@ async def test_setup_consumed_and_passwords_not_exposed(env):
     assert PASSWORD not in text and "password_hash" not in text and "refresh_token" not in text
     user=control.store.one("SELECT password_hash FROM users")
     assert user["password_hash"].startswith("$argon2id$")
+
+
+async def test_fresh_login_replaces_only_the_same_devices_old_session(env):
+    client, _, _ = env
+    key, pending = await enroll(env)
+    old = await approve(env, key, pending)
+    other_key, other_pending = await enroll(env)
+    other = await approve(env, other_key, other_pending)
+    socket = await client.ws_connect("/ws/relay", headers=headers(key, old["access_token"], path="/ws/relay"))
+    response = await client.post("/api/auth/login", headers={
+        "DPoP": proof(key, "POST", "/api/auth/login")}, json={
+        "username": "operator", "password": PASSWORD, "device_name": "Same desktop",
+        "platform": "test", "public_key": public(key)})
+    assert response.status == 200
+    current = await response.json()
+    assert current["device_id"] == old["device_id"]
+    assert (await client.get("/api/me", headers=headers(key, old["access_token"]))).status == 401
+    assert (await client.post("/api/auth/refresh", headers={
+        "DPoP": proof(key, "POST", "/api/auth/refresh", old["refresh_token"])},
+        json={"refresh_token": old["refresh_token"]})).status == 401
+    assert (await client.get("/api/me", headers=headers(key, current["access_token"]))).status == 200
+    assert (await client.get("/api/me", headers=headers(other_key, other["access_token"]))).status == 200
+    assert (await socket.receive(timeout=5)).type in (WSMsgType.CLOSE, WSMsgType.CLOSED)
+    await socket.close()

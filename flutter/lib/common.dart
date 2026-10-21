@@ -30,6 +30,7 @@ import 'package:window_size/window_size.dart' as window_size;
 
 import '../consts.dart';
 import 'common/widgets/overlay.dart';
+import 'common/widgets/login.dart';
 import 'mobile/pages/file_manager_page.dart';
 import 'mobile/pages/remote_page.dart';
 import 'mobile/pages/view_camera_page.dart';
@@ -2580,6 +2581,7 @@ connect(BuildContext context, String id,
     String? connToken,
     bool? isSharedPassword}) async {
   if (id == '') return;
+  if (!await ensureManagedAccount()) return;
   if (!isDesktop || desktopType == DesktopType.main) {
     try {
       if (Get.isRegistered<IDTextEditingController>()) {

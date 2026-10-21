@@ -14,6 +14,7 @@ import 'package:url_launcher/url_launcher_string.dart';
 import '../../common.dart';
 import '../../common/widgets/dialog.dart';
 import '../../common/widgets/login.dart';
+import '../../models/managed_account_model.dart';
 import '../../consts.dart';
 import '../../models/model.dart';
 import '../../models/platform_model.dart';
@@ -719,6 +720,16 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
     final settings = SettingsList(
       sections: [
         customClientSection,
+        if (managedAccount.enabled)
+          SettingsSection(title: Text(translate('Account')), tiles: [
+            SettingsTile(
+              title: Obx(() => Text(managedAccount.signedIn
+                  ? managedAccount.username.value : translate('Login'))),
+              description: Obx(() => Text(managedAccount.statusText)),
+              leading: const Icon(Icons.person_outline),
+              onPressed: (_) => loginDialog(),
+            ),
+          ]),
         if (!bind.isDisableAccount())
           SettingsSection(
             title: Text(translate('Account')),

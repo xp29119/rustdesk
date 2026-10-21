@@ -735,7 +735,9 @@ async fn run_service(_arguments: Vec<OsString>) -> ResultType<()> {
                     if let Ok(Some(data)) = stream.next_timeout(1000).await {
                         match data {
                             #[cfg(feature = "managed-client")]
-                            data @ ipc::Data::ManagedAuth(_) => {
+                            data @ (ipc::Data::ManagedAuth(_)
+                            | ipc::Data::ManagedTransfer(_)
+                            | ipc::Data::ManagedAuthCapabilities) => {
                                 tokio::spawn(async move {
                                     ipc::managed::handle(&data, &mut stream).await;
                                 });

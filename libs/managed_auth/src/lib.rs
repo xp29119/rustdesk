@@ -26,13 +26,17 @@ pub trait Vault: Send + Sync {
     fn save(&self, value: &[u8]) -> Result<()>;
 }
 
-#[derive(Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 struct Stored {
     version: u32,
     seed: [u8; 32],
     username: String,
     device_id: String,
     refresh_token: Option<String>,
+    #[serde(default)]
+    background_owner: bool,
+    #[serde(default)]
+    transfer_hash: String,
 }
 
 impl Stored {
@@ -43,11 +47,24 @@ impl Stored {
             username: String::new(),
             device_id: String::new(),
             refresh_token: None,
+            background_owner: false,
+            transfer_hash: String::new(),
         }
     }
 
     fn key(&self) -> SigningKey {
         SigningKey::from_bytes(&self.seed)
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
+pub struct TransferRecord {
+    data: Vec<u8>,
+}
+
+impl fmt::Debug for TransferRecord {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("ManagedTransfer([redacted])")
     }
 }
 
@@ -229,7 +246,9 @@ impl Broker {
             }
         };
         Ok(Session {
-            state: if stored.refresh_token.is_some() {
+            state: if stored.background_owner {
+                "background"
+            } else if stored.refresh_token.is_some() {
                 "restoring"
             } else {
                 "signed_out"
@@ -313,6 +332,10 @@ impl Broker {
     }
 
     async fn refresh(&self, s: &mut Session) -> Result<()> {
+        ensure!(
+            !s.stored.background_owner,
+            "登录由无人值守服务保管，请恢复该服务或重新登录"
+        );
         let Some(token) = s.stored.refresh_token.take().map(Zeroizing::new) else {
             s.access = None;
             s.state = "signed_out".into();
@@ -361,6 +384,108 @@ impl Broker {
         })
     }
 
+    /// Read the local account without rotating a credential or making a network request.
+    pub async fn local_status(&self) -> Result<Status> {
+        let mut guard = self.session.lock().await;
+        if guard.is_none() {
+            *guard = Some(self.load().await?);
+        }
+        let s = guard.as_ref().context("Login state unavailable")?;
+        Ok(Status {
+            state: s.state.clone(),
+            username: s.stored.username.clone(),
+            device_id: s.stored.device_id.clone(),
+        })
+    }
+
+    /// Freeze foreground refresh before handing the same approved identity to the service.
+    /// A pending record remains encrypted in the user vault until an idempotent adoption is acknowledged.
+    pub async fn prepare_background_transfer(&self) -> Result<Option<TransferRecord>> {
+        let mut guard = self.session.lock().await;
+        if guard.is_none() {
+            *guard = Some(self.load().await?);
+        }
+        let s = guard.as_mut().context("Login state unavailable")?;
+        if s.stored.username.is_empty()
+            || s.stored.device_id.is_empty()
+            || (s.stored.background_owner && s.stored.refresh_token.is_none())
+        {
+            return Ok(None);
+        }
+        let mut stored = s.stored.clone();
+        stored.background_owner = false;
+        let record = TransferRecord {
+            data: serde_json::to_vec(&stored)?,
+        };
+        s.stored.background_owner = true;
+        self.save(&s.stored).await?;
+        s.access = None;
+        s.state = "background".into();
+        Ok(Some(record))
+    }
+
+    pub async fn finish_background_transfer(&self, device_id: &str) -> Result<()> {
+        let mut guard = self.session.lock().await;
+        let s = guard.as_mut().context("Login state unavailable")?;
+        ensure!(
+            s.stored.background_owner && s.stored.device_id == device_id,
+            "Background login acknowledgement did not match this device"
+        );
+        s.stored.refresh_token = None;
+        self.save(&s.stored).await
+    }
+
+    /// Called only by the authenticated system-service IPC handler, never the Flutter bridge.
+    pub async fn adopt_background_transfer(&self, record: TransferRecord) -> Result<Response> {
+        ensure!(
+            record.data.len() <= 4096,
+            "Invalid background login transfer"
+        );
+        let transfer_hash = URL_SAFE_NO_PAD.encode(Sha256::digest(&record.data));
+        let mut incoming: Stored = serde_json::from_slice(&record.data)?;
+        ensure!(
+            incoming.version == 1
+                && !incoming.username.is_empty()
+                && incoming.username.len() <= 40
+                && !incoming.device_id.is_empty()
+                && incoming.device_id.len() <= 128
+                && incoming
+                    .refresh_token
+                    .as_ref()
+                    .map_or(true, |t| (40..=128).contains(&t.len())),
+            "Invalid background login record"
+        );
+        incoming.background_owner = false;
+        let mut guard = self.session.lock().await;
+        if guard.is_none() {
+            *guard = Some(self.load().await?);
+        }
+        let s = guard.as_mut().context("Login state unavailable")?;
+        if !s.stored.username.is_empty() {
+            ensure!(
+                s.stored.device_id == incoming.device_id
+                    && s.stored.seed == incoming.seed
+                    && s.stored.username.eq_ignore_ascii_case(&incoming.username),
+                "后台服务已绑定其他账号，请先退出该账号"
+            );
+            // Retrying the same transfer must neither roll back rotation nor undo logout.
+            if s.stored.transfer_hash == transfer_hash {
+                return Ok(Self::status(s));
+            }
+        }
+        incoming.transfer_hash = transfer_hash;
+        self.save(&incoming).await?;
+        s.state = if incoming.refresh_token.is_some() {
+            "restoring"
+        } else {
+            "signed_out"
+        }
+        .into();
+        s.stored = incoming;
+        s.access = None;
+        Ok(Self::status(s))
+    }
+
     /// The mutex serializes UI, signaling and relay requests within the credential owner.
     /// Do not create a Broker in every desktop process; route all callers to the service.
     pub async fn execute(&self, command: Command) -> Result<Response> {
@@ -390,6 +515,7 @@ impl Broker {
                 );
                 s.access = None;
                 s.state = "signed_out".into();
+                s.stored.background_owner = false;
                 s.stored.refresh_token = None;
                 self.save(&s.stored).await?;
                 let response = self.request(s, "/api/auth/login", json!({
@@ -405,7 +531,12 @@ impl Broker {
                 Ok(Self::status(s))
             }
             Command::Logout => {
+                ensure!(
+                    !s.stored.background_owner || s.stored.refresh_token.is_some(),
+                    "后台服务不可用，请恢复服务后退出，或在管理网页撤销设备"
+                );
                 let refresh = s.stored.refresh_token.take().map(Zeroizing::new);
+                s.stored.background_owner = false;
                 s.access = None;
                 s.state = "signed_out".into();
                 self.save(&s.stored).await?;

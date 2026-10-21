@@ -9,6 +9,15 @@ entitlements=$3
 sign_args=(--force --options runtime --sign "$identity")
 if [[ "$identity" != "-" ]]; then
   sign_args+=(--timestamp)
+else
+  # Ad-hoc signatures have no Team ID. Keep hardened runtime while permitting
+  # the app's bundled Flutter/Rust libraries to load without a Developer ID.
+  temporary_entitlements=$(mktemp)
+  trap 'rm -f "$temporary_entitlements"' EXIT
+  cp "$entitlements" "$temporary_entitlements"
+  /usr/libexec/PlistBuddy -c 'Add :com.apple.security.cs.disable-library-validation bool true' \
+    "$temporary_entitlements"
+  entitlements=$temporary_entitlements
 fi
 
 frameworks_path="$app_path/Contents/Frameworks"

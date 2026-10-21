@@ -6,6 +6,8 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/common/widgets/managed_account.dart';
+import 'package:flutter_hbb/models/managed_account_model.dart';
 import 'package:flutter_hbb/common/widgets/animated_rotation_widget.dart';
 import 'package:flutter_hbb/common/widgets/custom_password.dart';
 import 'package:flutter_hbb/consts.dart';
@@ -89,6 +91,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         alignment: Alignment.center,
         child: loadLogo(),
       ),
+      const ManagedAccountEntry(),
       buildTip(context),
       if (!isOutgoingOnly) buildIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
@@ -498,7 +501,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           !svcStopped.value &&
           bind.mainIsInstalled() &&
           !bind.mainIsInstalledDaemon(prompt: false)) {
-        return buildInstallCard("", "install_daemon_tip", "Install", () async {
+        return buildInstallCard("", managedAccount.enabled
+            ? "如需关闭窗口或重启后仍能被连接，可启用无人值守访问。" : "install_daemon_tip",
+            managedAccount.enabled ? "配置无人值守访问" : "Install", () async {
           bind.mainIsInstalledDaemon(prompt: true);
         });
       }

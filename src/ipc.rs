@@ -1,3 +1,10 @@
+#[cfg(all(
+    feature = "managed-client",
+    any(target_os = "windows", target_os = "macos")
+))]
+#[path = "ipc/managed_user.rs"]
+pub(crate) mod managed_user;
+
 #[path = "ipc/auth.rs"]
 mod ipc_auth;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
@@ -326,6 +333,12 @@ pub enum SwitchSidesUuidAction {
 pub enum Data {
     #[cfg(feature = "managed-client")]
     ManagedAuth(managed_auth::Command),
+    #[cfg(feature = "managed-client")]
+    ManagedTransfer(managed_auth::TransferRecord),
+    #[cfg(feature = "managed-client")]
+    ManagedAuthCapabilities,
+    #[cfg(feature = "managed-client")]
+    ManagedAuthCapabilitiesResponse(u8),
     #[cfg(feature = "managed-client")]
     ManagedAuthResponse(Result<managed_auth::Response, String>),
     Login {

@@ -6,6 +6,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/common/widgets/managed_account.dart';
+import 'package:flutter_hbb/models/managed_account_model.dart';
 import 'package:flutter_hbb/common/widgets/audio_input.dart';
 import 'package:flutter_hbb/common/widgets/setting_widgets.dart';
 import 'package:flutter_hbb/consts.dart';
@@ -72,7 +74,7 @@ class DesktopSettingPage extends StatefulWidget {
         bind.mainGetBuildinOption(key: kOptionHideNetworkSetting) != 'Y')
       SettingsTabKey.network,
     if (!bind.isIncomingOnly()) SettingsTabKey.display,
-    if (!bind.isDisableAccount()) SettingsTabKey.account,
+    if (managedAccount.enabled || !bind.isDisableAccount()) SettingsTabKey.account,
     if (isWindows &&
         !bind.isDisableSettings() &&
         bind.mainGetBuildinOption(key: kOptionHideRemotePrinterSetting) != 'Y')
@@ -465,6 +467,19 @@ class _GeneralState extends State<_General> {
       }
 
       return _Card(title: 'Service', children: [
+        if (managedAccount.enabled) ...[
+          const Padding(padding: EdgeInsets.only(left: 18, bottom: 8),
+              child: Text('普通登录不需要安装系统服务。需要关闭窗口或重启后继续被控时，再启用无人值守访问。')),
+          _Button('配置无人值守访问', () {
+            if (isMacOS && bind.mainIsInstalled()) {
+              bind.mainIsInstalledDaemon(prompt: true);
+            } else if (!bind.mainIsInstalled()) {
+              bind.mainGotoInstall();
+            } else {
+              start_service(true);
+            }
+          }),
+        ],
         _Button(serviceStop.value ? 'Start' : 'Stop', () {
           () async {
             serviceBtnEnabled.value = false;
@@ -2224,7 +2239,8 @@ class _AccountState extends State<_Account> {
     return ListView(
       controller: scrollController,
       children: [
-        _Card(title: 'Account', children: [accountAction(), useInfo()]),
+        _Card(title: 'Account', children: managedAccount.enabled
+            ? [const ManagedAccountDetails()] : [accountAction(), useInfo()]),
       ],
     ).marginOnly(bottom: _kListViewBottomMargin);
   }

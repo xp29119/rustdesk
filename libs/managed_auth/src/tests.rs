@@ -150,7 +150,11 @@ async fn mock_service() -> (String, Arc<AtomicUsize>, tokio::task::JoinHandle<()
             } else {
                 0
             };
-            valid_refresh = format!("{count:048}");
+            valid_refresh = if path == "/api/auth/login" {
+                format!("login-{}-credential", uuid::Uuid::new_v4())
+            } else {
+                format!("{count:048}")
+            };
             let response = if path == "/api/auth/logout" {
                 json!({"ok": true})
             } else {
@@ -286,4 +290,64 @@ async fn dedicated_ca_https_accepts_only_configured_trust_and_https() {
     let normal = Broker::new(&origin, "macos", Arc::new(MemoryVault::default())).unwrap();
     assert!(normal.http.get(format!("{origin}/api/me")).send().await.is_err());
     assert!(Broker::new_with_tls_root(&origin, "macos", Arc::new(MemoryVault::default()), b"invalid certificate").is_err());
+}
+
+#[tokio::test]
+async fn background_handoff_preserves_approval_and_cannot_replay_rotation_or_logout() {
+    let (origin, rotations, server) = mock_service().await;
+    let user_vault = Arc::new(MemoryVault::default());
+    let service_vault = Arc::new(MemoryVault::default());
+    let user = test_broker(&origin, user_vault.clone());
+    let service = test_broker(&origin, service_vault.clone());
+    let login = || Command::Login {
+        username: "alice".into(),
+        password: "long-test-password".into(),
+        device_name: "Test desktop".into(),
+    };
+    user.execute(login()).await.unwrap();
+    let original: Stored = serde_json::from_slice(&user_vault.load().unwrap().unwrap()).unwrap();
+    let transfer = user.prepare_background_transfer().await.unwrap().unwrap();
+    assert_eq!(user.local_status().await.unwrap().state, "background");
+    assert!(!format!("{transfer:?}").contains(original.refresh_token.as_ref().unwrap()));
+    service
+        .adopt_background_transfer(transfer.clone())
+        .await
+        .unwrap();
+    service.execute(Command::Status).await.unwrap();
+    let rotated = service_vault.load().unwrap().unwrap();
+    service
+        .adopt_background_transfer(transfer.clone())
+        .await
+        .unwrap();
+    assert_eq!(service_vault.load().unwrap().unwrap(), rotated);
+    user.finish_background_transfer("device-test")
+        .await
+        .unwrap();
+    let saved: Stored = serde_json::from_slice(&user_vault.load().unwrap().unwrap()).unwrap();
+    assert_eq!(saved.seed, original.seed);
+    assert!(saved.background_owner && saved.refresh_token.is_none());
+    let restored = test_broker(&origin, user_vault);
+    assert_eq!(restored.local_status().await.unwrap().state, "background");
+    assert_eq!(rotations.load(Ordering::SeqCst), 1);
+    service.execute(Command::Logout).await.unwrap();
+    service.adopt_background_transfer(transfer).await.unwrap();
+    assert_eq!(service.local_status().await.unwrap().state, "signed_out");
+    // An explicit later foreground login is a new transfer, not a replay of the logged-out one.
+    restored.execute(login()).await.unwrap();
+    let new_transfer = restored
+        .prepare_background_transfer()
+        .await
+        .unwrap()
+        .unwrap();
+    service
+        .adopt_background_transfer(new_transfer)
+        .await
+        .unwrap();
+    service.execute(Command::Status).await.unwrap();
+    assert_eq!(service.local_status().await.unwrap().state, "approved");
+    assert_eq!(
+        service.local_status().await.unwrap().device_id,
+        "device-test"
+    );
+    server.abort();
 }

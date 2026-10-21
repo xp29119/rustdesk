@@ -296,7 +296,7 @@ class Control:
         return session
 
     async def meta(self, request):
-        return web.json_response({"setup_required": not self.has_admin(), "version": "0.1.2"})
+        return web.json_response({"setup_required": not self.has_admin(), "version": "0.1.3"})
 
     async def setup(self, request):
         self.web_origin(request)
@@ -427,9 +427,12 @@ class Control:
             device = self.store.one("SELECT * FROM devices WHERE id=?", (did,))
             self.audit("device_enrolled", request, actor=user["id"], device=did)
         sid, refresh = str(uuid.uuid4()), secrets.token_urlsafe(48)
-        self.store.write("INSERT INTO sessions VALUES(?,?,?,?,?,0)",
-                         (sid, user["id"], device["id"], now(), now() + SESSION_SECONDS))
-        self.store.write("INSERT INTO refresh_tokens VALUES(?,?,0)", (digest(refresh), sid))
+        with self.store.db:
+            # A fresh login takes ownership of this device; other devices keep their sessions.
+            self.store.db.execute("UPDATE sessions SET revoked=1 WHERE device_id=?", (device["id"],))
+            self.store.db.execute("INSERT INTO sessions VALUES(?,?,?,?,?,0)",
+                                  (sid, user["id"], device["id"], now(), now() + SESSION_SECONDS))
+            self.store.db.execute("INSERT INTO refresh_tokens VALUES(?,?,0)", (digest(refresh), sid))
         self.audit("device_login", request, actor=user["id"], device=device["id"])
         session = self.live_session(sid)
         return web.json_response(self.credentials(session, refresh),

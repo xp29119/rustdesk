@@ -167,6 +167,16 @@ pub fn core_main() -> Option<Vec<String>> {
         }
     }
     hbb_common::init_log(false, &log_name);
+    #[cfg(all(
+        feature = "managed-client",
+        any(target_os = "windows", target_os = "macos")
+    ))]
+    if args.first().map(String::as_str) == Some("--managed-auth-agent") {
+        #[cfg(target_os = "macos")]
+        crate::platform::macos::hide_dock();
+        hbb_common::allow_err!(crate::ipc::managed_user::run_agent());
+        return None;
+    }
 
     // linux uni (url) go here.
     #[cfg(all(target_os = "linux", feature = "flutter"))]

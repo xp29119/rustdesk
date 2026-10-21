@@ -82,7 +82,7 @@ pub fn register_transport() {
 
 pub async fn execute(command: Command) -> ResultType<Response> {
     #[cfg(any(target_os = "windows", target_os = "macos"))]
-    return crate::ipc::managed::request(command).await;
+    return crate::ipc::managed_user::request(command).await;
     #[cfg(target_os = "android")]
     {
         let (reply, response) = hbb_common::tokio::sync::oneshot::channel();
@@ -140,4 +140,16 @@ pub async fn execute_owned(command: Command) -> ResultType<Response> {
     }
     #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "android")))]
     bail!("Managed login is not supported on this platform");
+}
+
+#[cfg(any(target_os = "windows", target_os = "macos"))]
+pub async fn adopt_background(record: managed_auth::TransferRecord) -> ResultType<Response> {
+    // This initializes and checks the privileged owner before accepting any transfer.
+    let _ = execute_owned(Command::Status).await?;
+    let broker = BROKER
+        .get()
+        .ok_or_else(|| hbb_common::anyhow::anyhow!("Service owner unavailable"))?
+        .as_ref()
+        .map_err(|e| hbb_common::anyhow::anyhow!("{e}"))?;
+    broker.adopt_background_transfer(record).await
 }
