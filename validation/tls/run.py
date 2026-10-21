@@ -269,7 +269,8 @@ def integration(binary, source, generated):
             with ObservedServer(**generated[name]) as server:
                 # The other CA is also offered through a trust environment variable. It must not
                 # enlarge this helper's explicit private-root-only store.
-                result = call_helper(binary, expected_hash, ca, server.url, server.url + "/api/login",
+                result = call_helper(binary, expected_hash, ca, server.url,
+                                     server.url + "/api/login?diagnostic_secret=fixture-do-not-log",
                                      extra_env={"SSL_CERT_FILE": str(generated["other_ca"])})
                 require(result.get("outcome") == "error" and result.get("phase") == "request",
                         "invalid certificate did not fail in request")
@@ -280,6 +281,9 @@ def integration(binary, source, generated):
                         "TLS failure was retried as plaintext or reached application HTTP")
                 require(any("cert" in s.lower() or "issuer" in s.lower() for s in result.get("errors", [])),
                         "failure was not a certificate verification error")
+                diagnostics = " ".join(result.get("errors", []))
+                require("fixture-do-not-log" not in diagnostics and "/api/login" not in diagnostics,
+                        "transport diagnostics disclosed the request URL")
                 return {"observations": counters, "certificate_error": True, "raw_http_retries": 0}
         test(name + "_rejected_without_retry", reject_certificate)
 

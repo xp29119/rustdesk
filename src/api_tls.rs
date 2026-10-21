@@ -105,6 +105,10 @@ impl ApiClient {
         if let Some(body) = body {
             request = request.body(body.to_owned());
         }
-        Ok(request.send().await?)
+        request.send().await.map_err(|error| -> Box<dyn Error + Send + Sync> {
+            // The Flutter bridge stringifies errors, so retain the nested TLS/socket
+            // cause here. Strip the URL before formatting; never log request data.
+            format!("Account API transport failed: {:?}", error.without_url()).into()
+        })
     }
 }
