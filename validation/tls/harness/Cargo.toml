@@ -1,0 +1,16 @@
+[package]
+name = "rustdesk-api-tls-validation"
+version = "0.1.0"
+edition = "2021"
+publish = false
+build = "build.rs"
+
+[dependencies]
+# Match the reviewed production Cargo.lock and reqwest feature selection.
+reqwest = { version = "=0.12.24", features = ["blocking", "socks", "json", "native-tls", "rustls-tls", "rustls-tls-native-roots", "gzip", "zstd"], default-features = false }
+url = "=2.5.2"
+tokio = { version = "=1.44.2", features = ["rt", "time", "macros"] }
+serde_json = "=1.0.118"
+sha2 = "=0.10.8"
+
+[workspace]

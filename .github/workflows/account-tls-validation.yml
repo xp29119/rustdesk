@@ -1,0 +1,47 @@
+name: Account API scoped TLS validation
+on:
+  push:
+    branches: [codex/minimal-client-1.5.0]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: account-api-tls-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          toolchain: 1.90.0
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a
+        with:
+          workspaces: validation/tls/harness
+          cache-on-failure: true
+          cache-workspace-crates: true
+      - name: Install native TLS and fixture requirements
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends pkg-config libssl-dev openssl
+      - name: Compile the production helper in its small validation harness
+        run: |
+          mkdir -p validation-results
+          cp Cargo.lock validation/tls/harness/Cargo.lock
+          RUSTDESK_API_TLS_SOURCE="$PWD/src/api_tls.rs" cargo build --manifest-path validation/tls/harness/Cargo.toml --release
+          cp validation/tls/harness/Cargo.lock validation-results/Cargo.lock
+      - name: Verify real TLS with temporary loopback fixtures
+        run: |
+          python3 validation/tls/run.py --binary "$PWD/validation/tls/harness/target/release/rustdesk-api-tls-validation" --source "$PWD/src/api_tls.rs" --report "$PWD/validation-results/account-tls.json"
+      - name: Upload scoped TLS evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: account-tls-validation-${{ github.sha }}
+          path: validation-results/
+          retention-days: 14
+          if-no-files-found: warn
